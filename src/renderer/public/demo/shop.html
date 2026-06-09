@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BerryMart — online store</title>
+    <style>
+      :root {
+        --bg: #131921;
+        --panel: #232f3e;
+        --accent: #ff9900;
+        --accent2: #febd69;
+        --text: #fff;
+        --muted: #ccc;
+        --link: #007185;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Amazon Ember", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      .top {
+        background: var(--panel);
+        padding: 0.6rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .logo {
+        font-weight: 700;
+        font-size: 1.35rem;
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .search-wrap {
+        flex: 1;
+        min-width: 200px;
+        display: flex;
+        max-width: 640px;
+      }
+      .search-wrap input {
+        flex: 1;
+        padding: 0.55rem 0.75rem;
+        border: none;
+        border-radius: 4px 0 0 4px;
+      }
+      .search-wrap button {
+        background: var(--accent);
+        border: none;
+        padding: 0 1rem;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .cart-btn {
+        background: #37475a;
+        border: 1px solid #555;
+        color: #fff;
+        padding: 0.45rem 0.85rem;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .subnav {
+        background: #37475a;
+        padding: 0.4rem 1rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .subnav a {
+        color: var(--muted);
+        margin-right: 1rem;
+        text-decoration: none;
+      }
+      .hero-banner {
+        background: linear-gradient(90deg, #232f3e, #131921);
+        padding: 1.5rem;
+        text-align: center;
+        border-bottom: 1px solid #3a4553;
+      }
+      .hero-banner h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.35rem;
+      }
+      .hero-banner p {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .status {
+        padding: 0.35rem 1rem;
+        font-size: 0.75rem;
+        color: #7dd3fc;
+      }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1rem;
+        padding: 1rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      @media (max-width: 900px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+      .product {
+        background: #fff;
+        color: #111;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .product img {
+        width: 100%;
+        height: 140px;
+        object-fit: contain;
+        background: #f3f3f3;
+        padding: 0.5rem;
+      }
+      .product-body {
+        padding: 0.75rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .product h3 {
+        font-size: 0.9rem;
+        font-weight: 400;
+        line-height: 1.35;
+        margin-bottom: 0.35rem;
+        min-height: 2.5rem;
+      }
+      .stars {
+        color: var(--accent);
+        font-size: 0.75rem;
+        margin-bottom: 0.25rem;
+      }
+      .price {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #b12704;
+      }
+      .prime {
+        font-size: 0.7rem;
+        color: #007185;
+        margin: 0.25rem 0;
+      }
+      .product button {
+        margin-top: auto;
+        background: var(--accent2);
+        border: 1px solid #a88734;
+        border-radius: 20px;
+        padding: 0.4rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+      }
+      .cart-panel {
+        background: var(--panel);
+        border-radius: 8px;
+        padding: 1rem;
+        height: fit-content;
+        position: sticky;
+        top: 1rem;
+      }
+      .cart-panel h2 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+        border-bottom: 1px solid #555;
+        padding-bottom: 0.5rem;
+      }
+      .cart-item {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        font-size: 0.85rem;
+        border-bottom: 1px solid #3a4553;
+        padding-bottom: 0.5rem;
+      }
+      .cart-item img {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        background: #fff;
+        border-radius: 4px;
+      }
+      .cart-total {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 1rem 0;
+      }
+      .checkout-btn {
+        width: 100%;
+        background: var(--accent);
+        border: none;
+        padding: 0.65rem;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .checkout-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .order-done {
+        background: #14532d;
+        color: #bbf7d0;
+        padding: 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        margin-top: 0.75rem;
+        display: none;
+      }
+      .order-done.show {
+        display: block;
+      }
+      .empty-cart {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      form[toolname] {
+        display: none;
+      }
+      .filters {
+        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      .filters select {
+        margin-left: 0.5rem;
+        padding: 0.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <a class="logo" href="/demo/shop.html">BerryMart</a>
+      <form id="header-search" class="search-wrap">
+        <input
+          name="q"
+          id="search-q"
+          placeholder="Search BerryMart products..."
+          aria-label="Search products"
+        />
+        <button type="submit">Search</button>
+      </form>
+      <button class="cart-btn" id="toggle-cart">
+        🛒 Cart (<span id="cart-count">0</span>)
+      </button>
+      <a
+        href="/demo/index.html"
+        style="color: #ccc; font-size: 0.85rem; text-decoration: none"
+        >Demos</a
+      >
+    </header>
+    <div class="subnav">
+      <a href="#">All</a><a href="#">Electronics</a><a href="#">Home</a
+      ><a href="#">Books</a><a href="#">Prime</a>
+    </div>
+    <div class="hero-banner">
+      <h1>Free Prime delivery on orders over 199 PLN</h1>
+      <p>
+        E-commerce demo with WebMCP — AI can search products, add to cart, and
+        complete checkout.
+      </p>
+    </div>
+    <div class="status">WebMCP: <span id="berry-status">Loading…</span></div>
+
+    <form
+      toolname="searchProducts"
+      tooldescription="Search products by query, category, or maximum price"
+    >
+      <input name="query" required aria-label="Search query" />
+      <input name="category" aria-label="Category: electronics, home, books" />
+      <input name="maxPrice" type="number" aria-label="Maximum price PLN" />
+    </form>
+    <form
+      toolname="addToCart"
+      tooldescription="Add a product to the cart by productId and quantity"
+    >
+      <input name="productId" required aria-label="Product ID" />
+      <input name="quantity" type="number" aria-label="Quantity" />
+    </form>
+    <form toolname="getCart" tooldescription="Get cart contents and total">
+      <input name="dummy" aria-label="Optional parameter" />
+    </form>
+    <form
+      toolname="checkout"
+      tooldescription="Place an order with shipping address and payment method"
+    >
+      <input name="fullName" required aria-label="Full name" />
+      <input name="address" required aria-label="Shipping address" />
+      <input name="paymentMethod" aria-label="Method: card, blik, transfer" />
+    </form>
+
+    <main>
+      <section>
+        <div class="filters">
+          Sort by:
+          <select id="sort-select">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="rating">Rating</option>
+          </select>
+        </div>
+        <div class="grid" id="product-grid"></div>
+      </section>
+      <aside class="cart-panel" id="cart-panel">
+        <h2>Cart</h2>
+        <div id="cart-items"><p class="empty-cart">Your cart is empty</p></div>
+        <div class="cart-total">
+          Total: <span id="cart-total">0,00 PLN</span>
+        </div>
+        <button class="checkout-btn" id="checkout-btn" disabled>
+          Proceed to checkout
+        </button>
+        <div class="order-done" id="order-done"></div>
+      </aside>
+    </main>
+
+    <script src="/demo/berry-tools.js"></script>
+    <script>
+      const PRODUCTS = [
+        {
+          id: "BM-001",
+          title: "BerrySound Pro Wireless Headphones",
+          category: "electronics",
+          price: 349.99,
+          rating: 4.6,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Headphones",
+        },
+        {
+          id: "BM-002",
+          title: "BerryBoard RGB Mechanical Keyboard",
+          category: "electronics",
+          price: 429.0,
+          rating: 4.8,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Keyboard",
+        },
+        {
+          id: "BM-003",
+          title: "BerryBrew Mini Coffee Maker",
+          category: "home",
+          price: 599.0,
+          rating: 4.4,
+          prime: false,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Coffee",
+        },
+        {
+          id: "BM-004",
+          title: "BerryVac X Robot Vacuum",
+          category: "home",
+          price: 1299.0,
+          rating: 4.5,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Vacuum",
+        },
+        {
+          id: "BM-005",
+          title: 'BerryReader Paper 11" Kindle',
+          category: "electronics",
+          price: 649.0,
+          rating: 4.7,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Reader",
+        },
+        {
+          id: "BM-006",
+          title: "WebMCP in Practice — by Tom Demo",
+          category: "books",
+          price: 49.99,
+          rating: 4.9,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Book",
+        },
+        {
+          id: "BM-007",
+          title: "BerryFit Ultra Smartwatch",
+          category: "electronics",
+          price: 899.0,
+          rating: 4.3,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Watch",
+        },
+        {
+          id: "BM-008",
+          title: "BerryChef Kitchen Knife Set",
+          category: "home",
+          price: 189.0,
+          rating: 4.2,
+          prime: false,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Knives",
+        },
+        {
+          id: "BM-009",
+          title: "BerryBoom Portable Speaker",
+          category: "electronics",
+          price: 279.0,
+          rating: 4.1,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Speaker",
+        },
+        {
+          id: "BM-010",
+          title: "Europe Travel Atlas 2026",
+          category: "books",
+          price: 79.0,
+          rating: 4.0,
+          prime: false,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Atlas",
+        },
+        {
+          id: "BM-011",
+          title: 'BerryDisplay 27" 4K Monitor',
+          category: "electronics",
+          price: 1599.0,
+          rating: 4.6,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Monitor",
+        },
+        {
+          id: "BM-012",
+          title: "BerryHome Cotton Bedding Set",
+          category: "home",
+          price: 159.0,
+          rating: 4.4,
+          prime: true,
+          img: "https://placehold.co/200x140/232f3e/ff9900?text=Bedding",
+        },
+      ];
+
+      const state = { visible: [...PRODUCTS], cart: [], lastOrder: null };
+
+      function formatPln(n) {
+        return n.toFixed(2).replace(".", ",") + " PLN";
+      }
+
+      function findProduct(id) {
+        return PRODUCTS.find(
+          (p) => p.id === id || p.id.toLowerCase() === String(id).toLowerCase(),
+        );
+      }
+
+      function searchProducts(args) {
+        const q = String(args.query || args.q || "")
+          .trim()
+          .toLowerCase();
+        const cat = (args.category || "").trim().toLowerCase();
+        const maxPrice = args.maxPrice != null ? Number(args.maxPrice) : null;
+        let list = [...PRODUCTS];
+        if (q) {
+          list = list.filter(
+            (p) =>
+              p.title.toLowerCase().includes(q) ||
+              p.category.includes(q) ||
+              p.id.toLowerCase().includes(q),
+          );
+        }
+        if (cat)
+          list = list.filter(
+            (p) => p.category === cat || p.category.includes(cat),
+          );
+        if (maxPrice) list = list.filter((p) => p.price <= maxPrice);
+        state.visible = list;
+        document.getElementById("search-q").value = args.query || args.q || "";
+        renderProducts();
+        return {
+          ok: true,
+          tool: "searchProducts",
+          count: list.length,
+          products: list.map((p) => ({
+            productId: p.id,
+            title: p.title,
+            price: p.price,
+            category: p.category,
+            rating: p.rating,
+          })),
+        };
+      }
+
+      function addToCart(args) {
+        const productId = args.productId || args.id;
+        const product = findProduct(productId);
+        if (!product) {
+          return {
+            ok: false,
+            error:
+              "Product " +
+              productId +
+              " does not exist. Use searchProducts to find a productId.",
+          };
+        }
+        const qty = Math.max(1, Number(args.quantity || args.qty || 1));
+        const existing = state.cart.find((c) => c.productId === product.id);
+        if (existing) existing.quantity += qty;
+        else
+          state.cart.push({
+            productId: product.id,
+            title: product.title,
+            price: product.price,
+            img: product.img,
+            quantity: qty,
+          });
+        renderCart();
+        return {
+          ok: true,
+          tool: "addToCart",
+          productId: product.id,
+          quantity: qty,
+          cartItems: state.cart.length,
+        };
+      }
+
+      function getCart() {
+        const subtotal = state.cart.reduce(
+          (s, i) => s + i.price * i.quantity,
+          0,
+        );
+        const shipping = subtotal >= 199 || subtotal === 0 ? 0 : 15.99;
+        return {
+          ok: true,
+          tool: "getCart",
+          items: state.cart.map((i) => ({
+            productId: i.productId,
+            title: i.title,
+            quantity: i.quantity,
+            lineTotal: i.price * i.quantity,
+          })),
+          subtotal,
+          shipping,
+          total: subtotal + shipping,
+          freeShippingEligible: subtotal >= 199,
+        };
+      }
+
+      function checkout(args) {
+        if (!state.cart.length) {
+          return { ok: false, error: "Cart is empty. Use addToCart first." };
+        }
+        const fullName = args.fullName || args.name || "Jane Demo";
+        const address = args.address || "123 Main St, New York";
+        const paymentMethod = args.paymentMethod || args.payment || "card";
+        const summary = getCart();
+        const orderId = "BM-ORD-" + Date.now().toString(36).toUpperCase();
+        state.lastOrder = {
+          orderId,
+          fullName,
+          address,
+          paymentMethod,
+          total: summary.total,
+          items: [...state.cart],
+        };
+        const el = document.getElementById("order-done");
+        el.textContent =
+          "Order " + orderId + " placed! Delivery to: " + address;
+        el.classList.add("show");
+        state.cart = [];
+        renderCart();
+        return { ok: true, tool: "checkout", order: state.lastOrder };
+      }
+
+      function renderProducts() {
+        const sort = document.getElementById("sort-select").value;
+        let list = [...state.visible];
+        if (sort === "price-asc") list.sort((a, b) => a.price - b.price);
+        else if (sort === "price-desc") list.sort((a, b) => b.price - a.price);
+        else if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
+
+        document.getElementById("product-grid").innerHTML = list
+          .map(
+            (p) => `
+        <article class="product" data-id="${p.id}">
+          <img src="${p.img}" alt="" loading="lazy" />
+          <div class="product-body">
+            <h3>${p.title}</h3>
+            <div class="stars">${"★".repeat(Math.floor(p.rating))} ${p.rating}</div>
+            <div class="price">${formatPln(p.price)}</div>
+            ${p.prime ? '<div class="prime">Prime — free delivery</div>' : ""}
+            <button type="button" data-add="${p.id}">Add to cart</button>
+          </div>
+        </article>`,
+          )
+          .join("");
+
+        document.querySelectorAll("[data-add]").forEach((btn) => {
+          btn.addEventListener("click", () =>
+            addToCart({ productId: btn.getAttribute("data-add"), quantity: 1 }),
+          );
+        });
+      }
+
+      function renderCart() {
+        const count = state.cart.reduce((s, i) => s + i.quantity, 0);
+        document.getElementById("cart-count").textContent = String(count);
+        const container = document.getElementById("cart-items");
+        if (!state.cart.length) {
+          container.innerHTML = '<p class="empty-cart">Your cart is empty</p>';
+          document.getElementById("cart-total").textContent = "0,00 PLN";
+          document.getElementById("checkout-btn").disabled = true;
+          return;
+        }
+        container.innerHTML = state.cart
+          .map(
+            (i) => `
+        <div class="cart-item">
+          <img src="${i.img}" alt="" />
+          <div>
+            <div>${i.title}</div>
+            <div>${i.quantity} × ${formatPln(i.price)}</div>
+          </div>
+        </div>`,
+          )
+          .join("");
+        const total = state.cart.reduce((s, i) => s + i.price * i.quantity, 0);
+        document.getElementById("cart-total").textContent = formatPln(total);
+        document.getElementById("checkout-btn").disabled = false;
+      }
+
+      document
+        .getElementById("header-search")
+        .addEventListener("submit", (e) => {
+          e.preventDefault();
+          searchProducts({ query: document.getElementById("search-q").value });
+        });
+      document
+        .getElementById("sort-select")
+        .addEventListener("change", renderProducts);
+      document.getElementById("checkout-btn").addEventListener("click", () => {
+        checkout({
+          fullName: "Jane Demo",
+          address: "123 Main St, New York",
+          paymentMethod: "card",
+        });
+      });
+
+      async function executeTool(name, args) {
+        switch (name) {
+          case "searchProducts":
+            return searchProducts(args);
+          case "addToCart":
+            return addToCart(args);
+          case "getCart":
+            return getCart();
+          case "checkout":
+            return checkout(args);
+          default:
+            throw new Error("Unknown tool: " + name);
+        }
+      }
+
+      window.__berryInitDemo({
+        site: "BerryMart",
+        statusText: "WebMCP: searchProducts, addToCart, getCart, checkout",
+        tools: [
+          {
+            name: "searchProducts",
+            description: "Search products",
+            source: "declarative",
+          },
+          {
+            name: "addToCart",
+            description: "Add to cart",
+            source: "declarative",
+          },
+          { name: "getCart", description: "View cart", source: "declarative" },
+          {
+            name: "checkout",
+            description: "Place order",
+            source: "declarative",
+          },
+        ],
+        execute: executeTool,
+      });
+
+      renderProducts();
+      renderCart();
+    </script>
+  </body>
+</html>

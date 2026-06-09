@@ -1,0 +1,43 @@
+import React from "react";
+import { LucideIcon } from "lucide-react";
+import { cn } from "../../../common/lib/utils";
+
+interface ToolBarButtonProps {
+  Icon?: LucideIcon;
+  active?: boolean;
+  toggled?: boolean;
+  onClick?: () => void;
+  children?: React.ReactNode;
+  className?: string;
+  title?: string;
+}
+
+export const ToolBarButton: React.FC<ToolBarButtonProps> = ({
+  Icon,
+  active = true,
+  toggled = false,
+  onClick,
+  children,
+  className,
+  title,
+}) => {
+  return (
+    <div
+      title={title}
+      className={cn(
+        "size-8 flex items-center justify-center rounded-md",
+        "text-secondary-foreground app-region-no-drag",
+        "transition-all duration-200",
+        !active
+          ? "opacity-50"
+          : "hover:bg-muted active:brightness-95 cursor-pointer",
+        toggled && "bg-accent/15 text-accent dark:bg-accent/20",
+        className,
+      )}
+      onClick={active ? onClick : undefined}
+      tabIndex={-1}
+    >
+      {children || (Icon && <Icon className="size-4.5" />)}
+    </div>
+  );
+};

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blueberry Checkbox Test Page</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --card: #1a2332;
+        --accent: #5b8def;
+        --accent-hover: #4a7cd8;
+        --text: #e7ecf3;
+        --muted: #8b9bb4;
+        --error: #ff6b6b;
+        --success: #2ec4b6;
+        --border: #2a3548;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 2rem 1rem;
+      }
+      .container {
+        max-width: 32rem;
+        margin: 0 auto;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .desc {
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+        line-height: 1.5;
+      }
+      .test-group {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .test-case {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1.25rem;
+      }
+      .test-case:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .test-case h3 {
+        font-size: 0.95rem;
+        color: var(--muted);
+        margin-bottom: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      /* Case 1: Custom Label Wrapper (Domino's Pizza style) */
+      .Checkbox__label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .Checkbox__input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+      .Checkbox__check {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--muted);
+        border-radius: 4px;
+        display: inline-block;
+        flex-shrink: 0;
+        position: relative;
+        transition: all 0.2s;
+        margin-top: 2px;
+      }
+      .Checkbox__input:checked + .Checkbox__check {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .Checkbox__input:checked + .Checkbox__check::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 3px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg);
+      }
+      .Checkbox__text {
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      /* Case 2: Custom Checkbox (Sibling label with ID) */
+      .custom-cb-wrapper {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .sibling-input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+      .sibling-check {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--muted);
+        border-radius: 4px;
+        display: inline-block;
+        flex-shrink: 0;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 2px;
+      }
+      .sibling-input:checked + .sibling-check {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .sibling-input:checked + .sibling-check::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 3px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg);
+      }
+      .sibling-label {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      /* Case 3: Fully Custom ARIA Div Checkbox */
+      .aria-cb-wrapper {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .aria-cb {
+        width: 22px;
+        height: 22px;
+        border: 2px solid var(--muted);
+        border-radius: 4px;
+        display: inline-block;
+        flex-shrink: 0;
+        position: relative;
+        transition: all 0.2s;
+        margin-top: 2px;
+      }
+      .aria-cb[aria-checked="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .aria-cb[aria-checked="true"]::after {
+        content: "";
+        position: absolute;
+        left: 7px;
+        top: 3px;
+        width: 5px;
+        height: 10px;
+        border: solid white;
+        border-width: 0 2.5px 2.5px 0;
+        transform: rotate(45deg);
+      }
+
+      .btn {
+        width: 100%;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 1rem;
+      }
+      .btn:hover {
+        background: var(--accent-hover);
+      }
+      .feedback {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        display: none;
+      }
+      .feedback.error {
+        display: block;
+        background: rgba(255, 107, 107, 0.15);
+        color: var(--error);
+        border: 1px solid rgba(255, 107, 107, 0.3);
+      }
+      .feedback.success {
+        display: block;
+        background: rgba(46, 196, 182, 0.15);
+        color: var(--success);
+        border: 1px solid rgba(46, 196, 182, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🫐 Checkbox Validation & Click Test</h1>
+      <p class="desc">
+        Mimics custom, hidden, and ARIA checkbox patterns (including Domino's
+        Pizza styling) to verify correct click resolution and state changes.
+      </p>
+
+      <div class="test-group">
+        <!-- Case 1: Label Wrapper (Domino's Pizza style) -->
+        <div class="test-case">
+          <h3>Test Case 1: Wrapped Hidden Input (Domino's Style)</h3>
+          <label class="Checkbox__label">
+            <input type="checkbox" id="consent-terms" class="Checkbox__input" />
+            <span class="Checkbox__check"></span>
+            <span class="Checkbox__text">
+              Wyrażam zgodę na warunki rejestracji oraz otrzymywanie wiadomości
+              handlowych (Regulamin Domino's).
+            </span>
+          </label>
+        </div>
+
+        <!-- Case 2: Sibling Label -->
+        <div class="test-case">
+          <h3>Test Case 2: Sibling Label with ID association</h3>
+          <div class="custom-cb-wrapper">
+            <input
+              type="checkbox"
+              id="consent-marketing"
+              class="sibling-input"
+            />
+            <label for="consent-marketing" class="sibling-check"></label>
+            <label for="consent-marketing" class="sibling-label">
+              Zgadzam się na przetwarzanie moich danych osobowych w celach
+              marketingowych.
+            </label>
+          </div>
+        </div>
+
+        <!-- Case 3: Fully Custom ARIA element -->
+        <div class="test-case">
+          <h3>Test Case 3: Fully custom role="checkbox" element</h3>
+          <div class="aria-cb-wrapper" onclick="toggleAriaCb()">
+            <div
+              id="consent-aria"
+              role="checkbox"
+              aria-checked="false"
+              class="aria-cb"
+            ></div>
+            <span class="Checkbox__text">
+              Akceptuję politykę prywatności i zgody cookies (Brak tagu INPUT).
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn" onclick="submitForm()">Zweryfikuj i wyślij</button>
+      <div id="feedback" class="feedback"></div>
+    </div>
+
+    <script>
+      function toggleAriaCb() {
+        const el = document.getElementById("consent-aria");
+        const isChecked = el.getAttribute("aria-checked") === "true";
+        el.setAttribute("aria-checked", !isChecked);
+
+        // Trigger synthetic change/input events for listeners
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+
+      function submitForm() {
+        const cb1 = document.getElementById("consent-terms").checked;
+        const cb2 = document.getElementById("consent-marketing").checked;
+        const cb3 =
+          document
+            .getElementById("consent-aria")
+            .getAttribute("aria-checked") === "true";
+
+        const feedback = document.getElementById("feedback");
+
+        if (!cb1) {
+          feedback.className = "feedback error";
+          feedback.innerText =
+            "Błąd: Musisz zaznaczyć Regulamin Domino's (Test Case 1).";
+          return;
+        }
+        if (!cb2) {
+          feedback.className = "feedback error";
+          feedback.innerText =
+            "Błąd: Zgoda marketingowa (Test Case 2) jest wymagana.";
+          return;
+        }
+        if (!cb3) {
+          feedback.className = "feedback error";
+          feedback.innerText =
+            "Błąd: Akceptacja polityki prywatności (Test Case 3) jest wymagana.";
+          return;
+        }
+
+        feedback.className = "feedback success";
+        feedback.innerText =
+          "Sukces! Wszystkie wymagane zgody zostały zaznaczone prawidłowo. Kod promocyjny: BERRY50OFF";
+      }
+    </script>
+  </body>
+</html>

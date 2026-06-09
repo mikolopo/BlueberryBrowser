@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blueberry TopBar</title>
+    <script src="/common/theme-init.js"></script>
+    <script>
+      try {
+        if (window.electron && window.electron.ipcRenderer) {
+          var isDark = document.documentElement.classList.contains("dark");
+          window.electron.ipcRenderer.send("dark-mode-changed", isDark);
+        }
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>

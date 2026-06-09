@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FocusDesk — tasks & pomodoro</title>
+    <style>
+      :root {
+        --bg: #0c0f14;
+        --panel: #151a22;
+        --accent: #a78bfa;
+        --accent2: #7c3aed;
+        --ok: #4ade80;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --warn: #fb923c;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: Inter, system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #1e293b;
+      }
+      .brand {
+        font-weight: 700;
+        font-size: 1.2rem;
+      }
+      .brand span {
+        color: var(--accent);
+      }
+      header a {
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-decoration: none;
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+      .intro {
+        margin-bottom: 1.5rem;
+      }
+      .intro h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.35rem;
+      }
+      .intro p {
+        color: var(--muted);
+        line-height: 1.5;
+        max-width: 36rem;
+      }
+      .status {
+        font-size: 0.8rem;
+        color: var(--ok);
+        margin-bottom: 1rem;
+      }
+      .columns {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 1.25rem;
+      }
+      @media (max-width: 720px) {
+        .columns {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid #243044;
+        border-radius: 12px;
+        padding: 1rem;
+      }
+      .card h2 {
+        font-size: 0.95rem;
+        margin-bottom: 0.75rem;
+      }
+      .task-form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+      .task-form input,
+      .task-form select {
+        flex: 1;
+        min-width: 120px;
+        padding: 0.55rem 0.65rem;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #0f172a;
+        color: var(--text);
+      }
+      .task-form button {
+        background: var(--accent2);
+        color: #fff;
+        border: none;
+        padding: 0.55rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .task-list {
+        list-style: none;
+      }
+      .task {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.65rem;
+        padding: 0.65rem 0;
+        border-bottom: 1px solid #1e293b;
+      }
+      .task.done {
+        opacity: 0.55;
+      }
+      .task.done .title {
+        text-decoration: line-through;
+      }
+      .task input[type="checkbox"] {
+        margin-top: 0.25rem;
+        accent-color: var(--accent);
+      }
+      .task .title {
+        font-weight: 500;
+      }
+      .task .meta {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 0.2rem;
+      }
+      .prio-high {
+        color: var(--warn);
+      }
+      .prio-low {
+        color: var(--muted);
+      }
+      .timer-display {
+        font-size: 2.5rem;
+        font-weight: 700;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+        margin: 0.5rem 0;
+      }
+      .timer-display.active {
+        color: var(--accent);
+      }
+      .timer-controls {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .timer-controls button {
+        padding: 0.45rem 0.85rem;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .timer-controls button.primary {
+        background: var(--accent2);
+        border-color: var(--accent2);
+      }
+      .stats {
+        font-size: 0.85rem;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+      form[toolname] {
+        display: none;
+      }
+      .empty {
+        color: var(--muted);
+        font-size: 0.85rem;
+        padding: 1rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">Focus<span>Desk</span></div>
+      <a href="/demo/index.html">← Demos</a>
+    </header>
+    <div class="wrap">
+      <div class="intro">
+        <h1>Task planner with focus sessions</h1>
+        <p>
+          Original productivity demo — AI can add tasks, list the backlog, mark
+          items complete, and start a Pomodoro timer on a selected task.
+        </p>
+      </div>
+      <div class="status">WebMCP: <span id="berry-status">Loading…</span></div>
+
+      <form
+        toolname="addTask"
+        tooldescription="Add a new task with title, priority (low, medium, high), and optional tag"
+      >
+        <input name="title" required aria-label="Task title" />
+        <input name="priority" aria-label="Priority: low, medium, high" />
+        <input name="tag" aria-label="Tag e.g. work, home" />
+      </form>
+      <form
+        toolname="listTasks"
+        tooldescription="List tasks with status filter (all, active, done) or tag"
+      >
+        <input name="status" aria-label="Status filter" />
+        <input name="tag" aria-label="Tag filter" />
+      </form>
+      <form
+        toolname="completeTask"
+        tooldescription="Mark a task as complete by taskId"
+      >
+        <input name="taskId" required aria-label="Task ID" />
+      </form>
+      <form
+        toolname="startFocusSession"
+        tooldescription="Start a Pomodoro session (default 25 min) on taskId"
+      >
+        <input name="taskId" aria-label="Task ID to focus on" />
+        <input
+          name="minutes"
+          type="number"
+          aria-label="Session length in minutes"
+        />
+      </form>
+
+      <div class="columns">
+        <section class="card">
+          <h2>Tasks</h2>
+          <form id="manual-add" class="task-form">
+            <input
+              name="title"
+              placeholder="New task…"
+              required
+              aria-label="Title"
+            />
+            <select name="priority" aria-label="Priority">
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="low">Low</option>
+            </select>
+            <input name="tag" placeholder="Tag" aria-label="Tag" />
+            <button type="submit">Add</button>
+          </form>
+          <ul class="task-list" id="task-list"></ul>
+        </section>
+        <aside class="card">
+          <h2>Pomodoro</h2>
+          <div class="timer-display" id="timer">25:00</div>
+          <div class="timer-controls">
+            <button type="button" class="primary" id="start-timer">
+              Start
+            </button>
+            <button type="button" id="pause-timer">Pause</button>
+            <button type="button" id="reset-timer">Reset</button>
+          </div>
+          <p
+            id="focus-task-label"
+            style="
+              text-align: center;
+              font-size: 0.8rem;
+              color: var(--muted);
+              margin-top: 0.75rem;
+            "
+          >
+            No active task
+          </p>
+          <hr
+            style="border: none; border-top: 1px solid #334155; margin: 1rem 0"
+          />
+          <div class="stats" id="stats"></div>
+        </aside>
+      </div>
+    </div>
+
+    <script src="/demo/berry-tools.js"></script>
+    <script>
+      const STORAGE_KEY = "focusdesk-demo-v1";
+      let nextId = 1;
+      let timerInterval = null;
+      let secondsLeft = 25 * 60;
+      let timerRunning = false;
+      let focusTaskId = null;
+      let sessionsCompleted = 0;
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const data = JSON.parse(raw);
+            return {
+              tasks: data.tasks || [],
+              nextId: data.nextId || 1,
+              sessionsCompleted: data.sessionsCompleted || 0,
+            };
+          }
+        } catch (_) {}
+        return {
+          tasks: [
+            {
+              id: "T-1",
+              title: "Prepare WebMCP presentation",
+              priority: "high",
+              tag: "work",
+              done: false,
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "T-2",
+              title: "Test flights and shop demos",
+              priority: "medium",
+              tag: "demo",
+              done: false,
+              createdAt: new Date().toISOString(),
+            },
+          ],
+          nextId: 3,
+          sessionsCompleted: 0,
+        };
+      }
+
+      const persisted = loadState();
+      const state = {
+        tasks: persisted.tasks,
+        sessionsCompleted: persisted.sessionsCompleted,
+      };
+      nextId = persisted.nextId;
+
+      function saveState() {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({
+            tasks: state.tasks,
+            nextId,
+            sessionsCompleted,
+          }),
+        );
+      }
+
+      function newTaskId() {
+        return "T-" + nextId++;
+      }
+
+      function addTask(args) {
+        const title = String(args.title || "").trim();
+        if (!title) return { ok: false, error: "title is required" };
+        const priority = (args.priority || "medium").toLowerCase();
+        const tag = (args.tag || "general").trim();
+        const task = {
+          id: newTaskId(),
+          title,
+          priority: ["low", "medium", "high"].includes(priority)
+            ? priority
+            : "medium",
+          tag,
+          done: false,
+          createdAt: new Date().toISOString(),
+        };
+        state.tasks.unshift(task);
+        saveState();
+        renderTasks();
+        updateStats();
+        return { ok: true, tool: "addTask", task };
+      }
+
+      function listTasks(args) {
+        const status = (args.status || "all").toLowerCase();
+        const tag = args.tag ? String(args.tag).toLowerCase() : null;
+        let list = [...state.tasks];
+        if (status === "active") list = list.filter((t) => !t.done);
+        else if (status === "done") list = list.filter((t) => t.done);
+        if (tag) list = list.filter((t) => t.tag.toLowerCase().includes(tag));
+        return {
+          ok: true,
+          tool: "listTasks",
+          count: list.length,
+          tasks: list.map((t) => ({
+            taskId: t.id,
+            title: t.title,
+            priority: t.priority,
+            tag: t.tag,
+            done: t.done,
+          })),
+        };
+      }
+
+      function completeTask(args) {
+        const taskId = args.taskId || args.id;
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return { ok: false, error: "Task " + taskId + " not found" };
+        task.done = true;
+        task.completedAt = new Date().toISOString();
+        saveState();
+        renderTasks();
+        updateStats();
+        return {
+          ok: true,
+          tool: "completeTask",
+          taskId: task.id,
+          title: task.title,
+        };
+      }
+
+      function formatTimer(secs) {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+      }
+
+      function updateTimerDisplay() {
+        const el = document.getElementById("timer");
+        el.textContent = formatTimer(secondsLeft);
+        el.classList.toggle("active", timerRunning);
+      }
+
+      function startFocusSession(args) {
+        const minutes = Math.max(1, Number(args.minutes || 25));
+        secondsLeft = minutes * 60;
+        const taskId = args.taskId || args.id || null;
+        focusTaskId = taskId;
+        const task = taskId ? state.tasks.find((t) => t.id === taskId) : null;
+        document.getElementById("focus-task-label").textContent = task
+          ? "Focus: " + task.title
+          : "General session (" + minutes + " min)";
+        if (timerInterval) clearInterval(timerInterval);
+        timerRunning = true;
+        timerInterval = setInterval(() => {
+          if (secondsLeft <= 0) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            timerRunning = false;
+            sessionsCompleted++;
+            saveState();
+            updateStats();
+            alert("Pomodoro session complete! 🎯");
+            return;
+          }
+          secondsLeft--;
+          updateTimerDisplay();
+        }, 1000);
+        updateTimerDisplay();
+        return {
+          ok: true,
+          tool: "startFocusSession",
+          taskId: focusTaskId,
+          minutes,
+          message: "Timer started for " + minutes + " min",
+        };
+      }
+
+      function renderTasks() {
+        const ul = document.getElementById("task-list");
+        if (!state.tasks.length) {
+          ul.innerHTML =
+            '<li class="empty">No tasks — add one manually or via AI (addTask).</li>';
+          return;
+        }
+        ul.innerHTML = state.tasks
+          .map((t) => {
+            const prioCls =
+              t.priority === "high"
+                ? "prio-high"
+                : t.priority === "low"
+                  ? "prio-low"
+                  : "";
+            return `<li class="task${t.done ? " done" : ""}" data-id="${t.id}">
+          <input type="checkbox" ${t.done ? "checked" : ""} data-complete="${t.id}" aria-label="Complete" />
+          <div>
+            <div class="title">${t.title}</div>
+            <div class="meta ${prioCls}">${t.id} · ${t.priority} · #${t.tag}</div>
+          </div>
+        </li>`;
+          })
+          .join("");
+        ul.querySelectorAll("[data-complete]").forEach((cb) => {
+          cb.addEventListener("change", () => {
+            if (cb.checked)
+              completeTask({ taskId: cb.getAttribute("data-complete") });
+          });
+        });
+      }
+
+      function updateStats() {
+        const active = state.tasks.filter((t) => !t.done).length;
+        const done = state.tasks.filter((t) => t.done).length;
+        document.getElementById("stats").innerHTML =
+          "Active: <strong>" +
+          active +
+          "</strong><br>" +
+          "Completed: <strong>" +
+          done +
+          "</strong><br>" +
+          "Pomodoro sessions: <strong>" +
+          sessionsCompleted +
+          "</strong>";
+      }
+
+      document.getElementById("manual-add").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        addTask(Object.fromEntries(fd.entries()));
+        e.target.reset();
+      });
+
+      document
+        .getElementById("start-timer")
+        .addEventListener("click", () =>
+          startFocusSession({ minutes: Math.ceil(secondsLeft / 60) }),
+        );
+      document.getElementById("pause-timer").addEventListener("click", () => {
+        timerRunning = !timerRunning;
+        if (timerRunning) {
+          timerInterval = setInterval(() => {
+            if (secondsLeft <= 0) {
+              clearInterval(timerInterval);
+              return;
+            }
+            secondsLeft--;
+            updateTimerDisplay();
+          }, 1000);
+        } else if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+        updateTimerDisplay();
+      });
+      document.getElementById("reset-timer").addEventListener("click", () => {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = null;
+        timerRunning = false;
+        secondsLeft = 25 * 60;
+        focusTaskId = null;
+        document.getElementById("focus-task-label").textContent =
+          "No active task";
+        updateTimerDisplay();
+      });
+
+      async function executeTool(name, args) {
+        switch (name) {
+          case "addTask":
+            return addTask(args);
+          case "listTasks":
+            return listTasks(args);
+          case "completeTask":
+            return completeTask(args);
+          case "startFocusSession":
+            return startFocusSession(args);
+          default:
+            throw new Error("Unknown tool: " + name);
+        }
+      }
+
+      window.__berryInitDemo({
+        site: "FocusDesk",
+        statusText:
+          "WebMCP: addTask, listTasks, completeTask, startFocusSession",
+        tools: [
+          { name: "addTask", description: "Add a task", source: "declarative" },
+          {
+            name: "listTasks",
+            description: "List tasks with filters",
+            source: "declarative",
+          },
+          {
+            name: "completeTask",
+            description: "Complete a task",
+            source: "declarative",
+          },
+          {
+            name: "startFocusSession",
+            description: "Start Pomodoro",
+            source: "declarative",
+          },
+        ],
+        execute: executeTool,
+      });
+
+      renderTasks();
+      updateStats();
+      updateTimerDisplay();
+    </script>
+  </body>
+</html>

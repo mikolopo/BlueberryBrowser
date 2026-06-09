@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkyBlue Airways — flights</title>
+    <style>
+      :root {
+        --bg: #071018;
+        --panel: #121c28;
+        --accent: #38bdf8;
+        --accent2: #0ea5e9;
+        --text: #f0f6fc;
+        --muted: #94a3b8;
+        --ok: #34d399;
+        --warn: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: linear-gradient(160deg, #071018, #0c1929);
+        color: var(--text);
+        min-height: 100vh;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #1e293b;
+        background: rgba(7, 16, 24, 0.9);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+      .logo {
+        font-weight: 700;
+        font-size: 1.25rem;
+        color: var(--accent);
+      }
+      .logo span {
+        color: var(--text);
+        font-weight: 400;
+      }
+      nav a {
+        color: var(--muted);
+        text-decoration: none;
+        margin-left: 1rem;
+        font-size: 0.85rem;
+      }
+      nav a:hover {
+        color: var(--accent);
+      }
+      .hero {
+        padding: 2rem 1.5rem 1rem;
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .hero h1 {
+        font-size: 1.75rem;
+        margin-bottom: 0.35rem;
+      }
+      .hero p {
+        color: var(--muted);
+        max-width: 36rem;
+        line-height: 1.5;
+      }
+      .search-panel {
+        max-width: 1100px;
+        margin: 1rem auto 0;
+        padding: 0 1.5rem;
+      }
+      .search-box {
+        background: var(--panel);
+        border: 1px solid #243447;
+        border-radius: 14px;
+        padding: 1.25rem;
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        align-items: end;
+      }
+      label {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 0.65rem 0.75rem;
+        border-radius: 8px;
+        border: 1px solid #334155;
+        background: #0f172a;
+        color: var(--text);
+        font-size: 0.95rem;
+      }
+      button.primary {
+        background: var(--accent2);
+        color: #fff;
+        border: none;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary:hover {
+        filter: brightness(1.08);
+      }
+      button.ghost {
+        background: transparent;
+        border: 1px solid #334155;
+        color: var(--text);
+        padding: 0.5rem 0.85rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+      .layout {
+        max-width: 1100px;
+        margin: 1.5rem auto;
+        padding: 0 1.5rem 3rem;
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 1.25rem;
+      }
+      @media (max-width: 800px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+      .results h2 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+      }
+      .flight-card {
+        background: var(--panel);
+        border: 1px solid #243447;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+        align-items: center;
+      }
+      .flight-card.selected {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+      .flight-card.booked {
+        border-color: var(--ok);
+        opacity: 0.85;
+      }
+      .airline {
+        font-weight: 600;
+      }
+      .meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 0.25rem;
+      }
+      .price {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--accent);
+        text-align: right;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        padding: 0.15rem 0.45rem;
+        border-radius: 999px;
+        background: #1e3a5f;
+        color: var(--accent);
+        margin-left: 0.35rem;
+      }
+      .sidebar {
+        background: var(--panel);
+        border: 1px solid #243447;
+        border-radius: 12px;
+        padding: 1rem;
+        height: fit-content;
+      }
+      .sidebar h3 {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+      }
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        margin-bottom: 0.35rem;
+        color: var(--muted);
+      }
+      .summary-row strong {
+        color: var(--text);
+      }
+      .status-bar {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.5rem 0.75rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      #berry-status {
+        color: var(--ok);
+      }
+      .empty {
+        text-align: center;
+        padding: 2rem;
+        color: var(--muted);
+        border: 1px dashed #334155;
+        border-radius: 12px;
+      }
+      .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        background: #14532d;
+        color: #bbf7d0;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        display: none;
+        z-index: 50;
+      }
+      .toast.show {
+        display: block;
+        animation: fade 0.3s;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      form[toolname] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo">SkyBlue <span>Airways</span></div>
+      <nav>
+        <a href="/demo/index.html">← Demos</a>
+        <a href="#" id="nav-my-trips">My bookings</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <h1>Find flights across Europe and beyond</h1>
+      <p>
+        Full flight search demo with WebMCP — the AI assistant can search
+        offers, compare prices, and book a ticket without manually filling out
+        the form.
+      </p>
+    </section>
+
+    <div class="status-bar">
+      WebMCP: <span id="berry-status">Loading…</span>
+    </div>
+
+    <section class="search-panel">
+      <form
+        id="search-form"
+        class="search-box"
+        toolname="searchFlights"
+        tooldescription="Search flights by destination city, departure date, and cabin class"
+      >
+        <div>
+          <label for="origin">From</label>
+          <input
+            name="origin"
+            id="origin"
+            value="Warsaw (WAW)"
+            aria-label="Departure city"
+          />
+        </div>
+        <div>
+          <label for="destination">To</label>
+          <input
+            name="destination"
+            id="destination"
+            placeholder="e.g. Tokyo, Berlin"
+            required
+            aria-label="Destination city"
+          />
+        </div>
+        <div>
+          <label for="date">Departure date</label>
+          <input
+            name="date"
+            id="date"
+            type="date"
+            aria-label="Departure date"
+          />
+        </div>
+        <div>
+          <label for="cabin">Class</label>
+          <select name="cabin" id="cabin" aria-label="Travel class">
+            <option value="economy">Economy</option>
+            <option value="premium">Premium Economy</option>
+            <option value="business">Business</option>
+          </select>
+        </div>
+        <div>
+          <label for="passengers">Passengers</label>
+          <input
+            name="passengers"
+            id="passengers"
+            type="number"
+            min="1"
+            max="9"
+            value="1"
+            aria-label="Number of passengers"
+          />
+        </div>
+        <button type="submit" class="primary">Search flights</button>
+      </form>
+    </section>
+
+    <form
+      toolname="getOffers"
+      tooldescription="Get currently displayed flight offers (optionally filter by max price in PLN)"
+    >
+      <input name="maxPrice" type="number" aria-label="Maximum price PLN" />
+      <input name="sortBy" aria-label="Sort by: price or duration" />
+    </form>
+
+    <form
+      toolname="bookFlight"
+      tooldescription="Book a flight by offer ID (offerId) and passenger name"
+    >
+      <input name="offerId" required aria-label="Flight offer ID" />
+      <input name="passengerName" required aria-label="Passenger full name" />
+      <input name="email" aria-label="Contact email" />
+    </form>
+
+    <div class="layout">
+      <div class="results">
+        <h2>Search results <span id="result-count"></span></h2>
+        <div id="results-list">
+          <div class="empty">
+            Enter a destination city and click "Search flights" or ask the AI
+            assistant.
+          </div>
+        </div>
+      </div>
+      <aside class="sidebar">
+        <h3>Summary</h3>
+        <div class="summary-row">
+          <span>Route</span><strong id="sum-route">—</strong>
+        </div>
+        <div class="summary-row">
+          <span>Date</span><strong id="sum-date">—</strong>
+        </div>
+        <div class="summary-row">
+          <span>Class</span><strong id="sum-cabin">—</strong>
+        </div>
+        <div class="summary-row">
+          <span>Cheapest</span><strong id="sum-cheapest">—</strong>
+        </div>
+        <div class="summary-row">
+          <span>Bookings</span><strong id="sum-bookings">0</strong>
+        </div>
+        <hr
+          style="border: none; border-top: 1px solid #334155; margin: 1rem 0"
+        />
+        <h3>Latest booking</h3>
+        <p id="last-booking" style="font-size: 0.85rem; color: var(--muted)">
+          None
+        </p>
+      </aside>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="/demo/berry-tools.js"></script>
+    <script>
+      const AIRLINES = [
+        "SkyBlue",
+        "Nordic Wings",
+        "Demo Airways",
+        "Alpine Jet",
+        "Baltic Express",
+      ];
+      const DEST_ALIASES = {
+        tokio: "Tokyo",
+        tokyo: "Tokyo",
+        rzym: "Rome",
+        rome: "Rome",
+        berlin: "Berlin",
+        paryz: "Paris",
+        paris: "Paris",
+        londyn: "London",
+        london: "London",
+        madryt: "Madrid",
+        barcelona: "Barcelona",
+        amsterdam: "Amsterdam",
+        dubaj: "Dubai",
+        "nowy jork": "New York",
+        "new york": "New York",
+        nyc: "New York",
+      };
+
+      const state = {
+        query: null,
+        offers: [],
+        bookings: [],
+        selectedId: null,
+      };
+
+      const defaultDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + 30);
+        return d.toISOString().slice(0, 10);
+      };
+
+      document.getElementById("date").value = defaultDate();
+
+      function normalizeDest(raw) {
+        if (!raw) return "Unknown";
+        const key = String(raw).trim().toLowerCase();
+        return (
+          DEST_ALIASES[key] ||
+          raw.trim().replace(/\b\w/g, (c) => c.toUpperCase())
+        );
+      }
+
+      function hashSeed(str) {
+        let h = 0;
+        for (let i = 0; i < str.length; i++)
+          h = (h * 31 + str.charCodeAt(i)) | 0;
+        return Math.abs(h);
+      }
+
+      function generateOffers(origin, destination, date, cabin, passengers) {
+        const seed = hashSeed(destination + date + cabin);
+        const base = 180 + (seed % 420);
+        const cabinMul =
+          { economy: 1, premium: 1.45, business: 2.8 }[cabin] || 1;
+        const count = 3 + (seed % 3);
+        const offers = [];
+        for (let i = 0; i < count; i++) {
+          const airline = AIRLINES[(seed + i) % AIRLINES.length];
+          const price = Math.round(
+            (base + i * 47 + (seed % 80)) * cabinMul * Math.max(1, passengers),
+          );
+          const hours = 1 + ((seed + i * 3) % 11);
+          const mins = (seed + i * 7) % 60;
+          offers.push({
+            id: "SB-" + (1000 + (seed % 9000) + i),
+            airline,
+            origin: origin || "Warsaw (WAW)",
+            destination,
+            date,
+            cabin,
+            passengers: Number(passengers) || 1,
+            pricePln: price,
+            duration: hours + "h " + String(mins).padStart(2, "0") + "m",
+            stops: i === 0 ? 0 : i % 2,
+            refundable: i % 2 === 0,
+          });
+        }
+        return offers.sort((a, b) => a.pricePln - b.pricePln);
+      }
+
+      function showToast(msg) {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.classList.add("show");
+        setTimeout(() => t.classList.remove("show"), 3500);
+      }
+
+      function updateSummary() {
+        const q = state.query;
+        document.getElementById("sum-route").textContent = q
+          ? q.origin + " → " + q.destination
+          : "—";
+        document.getElementById("sum-date").textContent = q?.date || "—";
+        document.getElementById("sum-cabin").textContent = q?.cabin || "—";
+        const cheapest = state.offers[0];
+        document.getElementById("sum-cheapest").textContent = cheapest
+          ? cheapest.pricePln + " PLN"
+          : "—";
+        document.getElementById("sum-bookings").textContent = String(
+          state.bookings.length,
+        );
+        const last = state.bookings[state.bookings.length - 1];
+        document.getElementById("last-booking").textContent = last
+          ? last.confirmation +
+            " — " +
+            last.passengerName +
+            " (" +
+            last.destination +
+            ")"
+          : "None";
+      }
+
+      function renderResults() {
+        const list = document.getElementById("results-list");
+        document.getElementById("result-count").textContent = state.offers
+          .length
+          ? "(" + state.offers.length + ")"
+          : "";
+        if (!state.offers.length) {
+          list.innerHTML =
+            '<div class="empty">No results. Try a different city or date.</div>';
+          return;
+        }
+        list.innerHTML = state.offers
+          .map((o) => {
+            const booked = state.bookings.some((b) => b.offerId === o.id);
+            const sel = state.selectedId === o.id ? " selected" : "";
+            const bookedCls = booked ? " booked" : "";
+            return `<div class="flight-card${sel}${bookedCls}" data-id="${o.id}">
+          <div>
+            <div class="airline">${o.airline}${o.stops === 0 ? '<span class="badge">Direct</span>' : '<span class="badge">' + o.stops + " stop(s)</span>"}</div>
+            <div class="meta">${o.origin} → ${o.destination} · ${o.date} · ${o.duration} · ${o.cabin}</div>
+            <div class="meta">ID: ${o.id}${o.refundable ? " · Refundable" : ""}</div>
+          </div>
+          <div>
+            <div class="price">${o.pricePln} PLN</div>
+            <button type="button" class="ghost book-btn" data-id="${o.id}" ${booked ? "disabled" : ""}>${booked ? "Booked" : "Book"}</button>
+          </div>
+        </div>`;
+          })
+          .join("");
+
+        list.querySelectorAll(".book-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            bookFlight({
+              offerId: id,
+              passengerName: "Jane Demo",
+              email: "jane@demo.example",
+            });
+          });
+        });
+      }
+
+      function runSearch(args) {
+        const origin = args.origin || document.getElementById("origin").value;
+        const destination = normalizeDest(
+          args.destination || args.city || args.to,
+        );
+        const date =
+          args.date ||
+          args.departureDate ||
+          document.getElementById("date").value ||
+          defaultDate();
+        const cabin =
+          args.cabin || document.getElementById("cabin").value || "economy";
+        const passengers =
+          args.passengers || document.getElementById("passengers").value || 1;
+
+        document.getElementById("origin").value = origin;
+        document.getElementById("destination").value = destination;
+        document.getElementById("date").value = date;
+        document.getElementById("cabin").value = cabin;
+        document.getElementById("passengers").value = passengers;
+
+        state.query = {
+          origin,
+          destination,
+          date,
+          cabin,
+          passengers: Number(passengers),
+        };
+        state.offers = generateOffers(
+          origin,
+          destination,
+          date,
+          cabin,
+          passengers,
+        );
+        state.selectedId = state.offers[0]?.id || null;
+        renderResults();
+        updateSummary();
+        showToast(
+          "Found " + state.offers.length + " flights to " + destination,
+        );
+
+        return {
+          ok: true,
+          tool: "searchFlights",
+          query: state.query,
+          count: state.offers.length,
+          offers: state.offers.map((o) => ({
+            offerId: o.id,
+            airline: o.airline,
+            destination: o.destination,
+            date: o.date,
+            pricePln: o.pricePln,
+            duration: o.duration,
+            cabin: o.cabin,
+            direct: o.stops === 0,
+          })),
+          cheapest: state.offers[0]
+            ? {
+                offerId: state.offers[0].id,
+                pricePln: state.offers[0].pricePln,
+              }
+            : null,
+        };
+      }
+
+      function getOffers(args) {
+        let list = [...state.offers];
+        const maxPrice = args.maxPrice != null ? Number(args.maxPrice) : null;
+        if (maxPrice) list = list.filter((o) => o.pricePln <= maxPrice);
+        const sortBy = (args.sortBy || "price").toLowerCase();
+        if (sortBy === "duration") {
+          list.sort((a, b) => a.duration.localeCompare(b.duration));
+        } else {
+          list.sort((a, b) => a.pricePln - b.pricePln);
+        }
+        return {
+          ok: true,
+          tool: "getOffers",
+          count: list.length,
+          offers: list.map((o) => ({
+            offerId: o.id,
+            airline: o.airline,
+            pricePln: o.pricePln,
+            duration: o.duration,
+            destination: o.destination,
+          })),
+        };
+      }
+
+      function bookFlight(args) {
+        const offerId =
+          args.offerId || args.id || state.selectedId || state.offers[0]?.id;
+        const offer = state.offers.find((o) => o.id === offerId);
+        if (!offer) {
+          return {
+            ok: false,
+            error:
+              "Offer " +
+              offerId +
+              " not found. Search for flights first (searchFlights).",
+          };
+        }
+        if (state.bookings.some((b) => b.offerId === offerId)) {
+          return {
+            ok: false,
+            error: "Offer " + offerId + " is already booked.",
+          };
+        }
+        const passengerName = args.passengerName || args.name || "Demo Guest";
+        const email = args.email || "guest@skyblue.demo";
+        const confirmation =
+          "SB-CONF-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+        const booking = {
+          confirmation,
+          offerId,
+          passengerName,
+          email,
+          airline: offer.airline,
+          destination: offer.destination,
+          date: offer.date,
+          pricePln: offer.pricePln,
+          bookedAt: new Date().toISOString(),
+        };
+        state.bookings.push(booking);
+        state.selectedId = offerId;
+        renderResults();
+        updateSummary();
+        showToast("Booked! " + confirmation);
+        return { ok: true, tool: "bookFlight", booking };
+      }
+
+      document.getElementById("search-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        runSearch(Object.fromEntries(fd.entries()));
+      });
+
+      document.getElementById("nav-my-trips").addEventListener("click", (e) => {
+        e.preventDefault();
+        alert(
+          state.bookings.length
+            ? "Bookings:\n" +
+                state.bookings
+                  .map((b) => b.confirmation + " — " + b.destination)
+                  .join("\n")
+            : "No bookings.",
+        );
+      });
+
+      async function executeTool(toolName, args) {
+        switch (toolName) {
+          case "searchFlights":
+            return runSearch(args);
+          case "getOffers":
+            return getOffers(args);
+          case "bookFlight":
+            return bookFlight(args);
+          default:
+            throw new Error("Unknown tool: " + toolName);
+        }
+      }
+
+      window.__berryInitDemo({
+        site: "SkyBlue Airways",
+        statusText: "WebMCP: searchFlights, getOffers, bookFlight",
+        tools: [
+          {
+            name: "searchFlights",
+            description:
+              "Search flights (destination, date, cabin, passengers)",
+            source: "declarative",
+          },
+          {
+            name: "getOffers",
+            description: "List current offers with optional maxPrice filter",
+            source: "declarative",
+          },
+          {
+            name: "bookFlight",
+            description: "Book by offerId and passengerName",
+            source: "declarative",
+          },
+        ],
+        execute: executeTool,
+      });
+
+      try {
+        const mc = navigator.modelContext ?? navigator.modelContextTesting;
+        if (mc?.registerTool) {
+          mc.registerTool({
+            name: "searchFlights",
+            description: "Native: search SkyBlue flights",
+            inputSchema: {
+              type: "object",
+              properties: {
+                destination: { type: "string" },
+                date: { type: "string" },
+              },
+              required: ["destination"],
+            },
+            execute: async (args) => runSearch(args),
+          });
+        }
+      } catch (_) {
+        /* native optional */
+      }
+    </script>
+  </body>
+</html>
