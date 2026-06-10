@@ -8,12 +8,14 @@ const electronBridge = createSafeBridge({
     "dark-mode-changed",
     "browser-settings-changed",
     "topbar-settings-panel-changed",
+    "settings-toggle-request",
   ],
   invoke: ["get-sidebar-visible"],
   on: [
     "dark-mode-updated",
     "sidebar-visibility-changed",
     "tab-strip-visibility-changed",
+    "settings-toggle-request",
   ],
 });
 

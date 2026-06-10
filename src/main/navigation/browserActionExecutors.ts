@@ -394,6 +394,11 @@ export async function execBrowserScroll(
     if (!jsResult?.ok && !nativeWheel) throw new Error("Scroll failed");
     await sleep(350);
     console.log(`[BrowserAction:Scroll] SUCCESS.`);
+
+    if (ctx.onActionRecorded) {
+      ctx.onActionRecorded({ type: "scroll", selector: "body" });
+    }
+
     return { ok: true, direction, amount: px, nativeWheel, jsScroll: jsResult };
   });
 }

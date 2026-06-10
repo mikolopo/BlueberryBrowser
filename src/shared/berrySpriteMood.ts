@@ -18,6 +18,7 @@ export const BERRY_SPRITE_MOODS: Record<AgentActivityKind, BerrySpriteMood> = {
     frameMax: 0,
     frameMs: 0,
     pageMood: "idle",
+    sidebarClass: "animate-agent-bob",
   },
   thinking: {
     baseFrame: 1,

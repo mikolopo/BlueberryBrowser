@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from "react";
 import { cn } from "@common/lib/utils";
-import { Settings } from "lucide-react";
+import { Settings, X } from "lucide-react";
 import { useBrowserSettings } from "@common/hooks/useBrowserSettings";
 import { LLM_PROVIDER_LIST, getLlmProviderConfig } from "@shared/llm-config";
+import { motion } from "framer-motion";
 
 interface BrowserSettingsPanelProps {
   open: boolean;
@@ -65,9 +66,11 @@ export const BrowserSettingsPanel: React.FC<BrowserSettingsPanelProps> = ({
     llmProvider,
     llmModel,
     promptCacheEnabled,
+    screenPetEnabled,
     setLlmProvider,
     setLlmModel,
     setPromptCacheEnabled,
+    setScreenPetEnabled,
   } = useBrowserSettings();
 
   const providerConfig = getLlmProviderConfig(llmProvider);
@@ -99,28 +102,42 @@ export const BrowserSettingsPanel: React.FC<BrowserSettingsPanelProps> = ({
   if (!open) return null;
 
   return (
-    <>
-      <div
-        className="absolute inset-0 z-40 bg-black/15 animate-panel-fade app-region-no-drag"
-        aria-hidden
-        onClick={onClose}
-      />
-      <div
+    <motion.div
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
         ref={panelRef}
         className={cn(
-          "absolute top-2 right-3 z-50 w-[min(calc(100%-1.5rem),22rem)]",
-          "rounded-xl border border-border bg-popover shadow-expanded",
-          "animate-slide-in-right app-region-no-drag max-h-[calc(100%-1rem)] overflow-y-auto",
+          "w-full max-w-md rounded-2xl border border-border/80 dark:border-border/30 bg-card/95 p-4 shadow-xl flex flex-col max-h-[85vh] overflow-y-auto",
+          "app-region-no-drag",
         )}
         role="dialog"
         aria-label="Browser settings"
         onClick={(e) => e.stopPropagation()}
+        initial={{ scale: 0.95, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 10 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
       >
-        <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
-          <Settings className="size-4 text-muted-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">
-            Browser settings
-          </h2>
+        <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-2">
+          <div className="flex items-center gap-2">
+            <Settings className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">
+              Browser settings
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          >
+            <X className="size-4" />
+          </button>
         </div>
 
         <div className="p-3 space-y-5">
@@ -196,8 +213,14 @@ export const BrowserSettingsPanel: React.FC<BrowserSettingsPanelProps> = ({
             <Toggle
               checked={forcePageDarkMode}
               onChange={setForcePageDarkMode}
-              label="Force darkMode"
-              description="Additionally forces Dark Reader on pages (beyond native Google dark mode, etc.). Off = default page behavior."
+              label="Force dark mode"
+              description="Applies Dark Reader on all pages. Off = default page behavior."
+            />
+            <Toggle
+              checked={screenPetEnabled}
+              onChange={setScreenPetEnabled}
+              label="Screen assistant"
+              description="Shows the mini Berry pet that walks around the browser window."
             />
           </section>
 
@@ -209,7 +232,7 @@ export const BrowserSettingsPanel: React.FC<BrowserSettingsPanelProps> = ({
             </p>
           </div>
         </div>
-      </div>
-    </>
+      </motion.div>
+    </motion.div>
   );
 };

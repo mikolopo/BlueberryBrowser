@@ -19,10 +19,20 @@ export const LLM_PROVIDER_CONFIGS: Record<LlmProvider, LlmProviderConfig> = {
     models: [
       "gpt-4o-mini",
       "gpt-4o",
+      "chatgpt-4o-latest",
+      "gpt-4o-2024-11-20",
       "gpt-4.1-mini",
       "gpt-4.1",
       "o3-mini",
+      "o3-mini-2025-01-31",
       "o4-mini",
+      "o1",
+      "o1-2024-12-17",
+      "o1-mini",
+      "o1-preview",
+      "gpt-4",
+      "gpt-4-turbo",
+      "gpt-3.5-turbo"
     ],
     supportsPromptCache: true,
     cacheHint:
@@ -34,6 +44,9 @@ export const LLM_PROVIDER_CONFIGS: Record<LlmProvider, LlmProviderConfig> = {
     envKey: "ANTHROPIC_API_KEY",
     defaultModel: "claude-sonnet-4-6",
     models: [
+      "claude-3-5-sonnet-latest",
+      "claude-3-5-haiku-latest",
+      "claude-3-opus-latest",
       "claude-sonnet-4-6",
       "claude-haiku-4-5-20251001",
       "claude-opus-4-7",
@@ -41,6 +54,9 @@ export const LLM_PROVIDER_CONFIGS: Record<LlmProvider, LlmProviderConfig> = {
       "claude-3-5-haiku-20241022",
       "claude-sonnet-4-20250514",
       "claude-opus-4-20250514",
+      "claude-3-opus-20240229",
+      "claude-3-sonnet-20240229",
+      "claude-3-haiku-20240307"
     ],
     supportsPromptCache: true,
     cacheHint:
@@ -51,7 +67,11 @@ export const LLM_PROVIDER_CONFIGS: Record<LlmProvider, LlmProviderConfig> = {
     label: "DeepSeek",
     envKey: "DEEPSEEK_API_KEY",
     defaultModel: "deepseek-chat",
-    models: ["deepseek-chat", "deepseek-reasoner"],
+    models: [
+      "deepseek-chat",
+      "deepseek-reasoner",
+      "deepseek-coder"
+    ],
     supportsPromptCache: true,
     cacheHint:
       "KV disk cache hits automatically when the prompt prefix (system + tools) stays identical.",
@@ -66,6 +86,15 @@ export const LLM_PROVIDER_CONFIGS: Record<LlmProvider, LlmProviderConfig> = {
       "gemini-2.5-flash-lite",
       "gemini-2.5-pro",
       "gemini-2.0-flash",
+      "gemini-2.0-flash-lite-preview-02-05",
+      "gemini-2.0-pro-exp-02-05",
+      "gemini-2.0-flash-thinking-exp-01-21",
+      "gemini-2.0-flash-thinking-exp-1219",
+      "gemini-2.0-flash-exp",
+      "gemini-1.5-pro-latest",
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-pro",
+      "gemini-1.5-flash"
     ],
     supportsPromptCache: true,
     cacheHint:

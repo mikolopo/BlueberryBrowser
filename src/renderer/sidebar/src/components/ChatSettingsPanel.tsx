@@ -2,9 +2,9 @@ import React, { useEffect, useRef } from "react";
 import { cn } from "@common/lib/utils";
 import { useChatSettings } from "../contexts/ChatSettingsContext";
 import { SettingsSlidersIcon } from "./icons/SettingsSlidersIcon";
+import { motion } from "framer-motion";
 
 interface ChatSettingsPanelProps {
-  open: boolean;
   onClose: () => void;
 }
 
@@ -44,15 +44,12 @@ const Toggle: React.FC<{
 );
 
 export const ChatSettingsPanel: React.FC<ChatSettingsPanelProps> = ({
-  open,
   onClose,
 }) => {
   const panelRef = useRef<HTMLDivElement>(null);
-  const { webMcpEnabled, setWebMcpEnabled } = useChatSettings();
+  const { webMcpEnabled, setWebMcpEnabled, automationScriptsEnabled, setAutomationScriptsEnabled } = useChatSettings();
 
   useEffect(() => {
-    if (!open) return;
-
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -68,26 +65,32 @@ export const ChatSettingsPanel: React.FC<ChatSettingsPanelProps> = ({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onClick);
     };
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   return (
     <>
-      <div
-        className="absolute inset-0 z-40 bg-black/15 animate-panel-fade app-region-no-drag"
+      <motion.div
+        className="absolute inset-x-0 bottom-0 top-12 z-40 bg-black/10 backdrop-blur-[0.5px] app-region-no-drag"
         aria-hidden
         onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
       />
-      <div
+      <motion.div
         ref={panelRef}
         className={cn(
-          "absolute top-1 right-2 z-50 w-[min(calc(100%-1rem),18rem)]",
-          "rounded-xl border border-border bg-popover shadow-expanded",
-          "animate-slide-in-right app-region-no-drag",
+          "absolute top-12 right-2 z-50 w-[min(calc(100%-1rem),18rem)]",
+          "rounded-xl border border-border bg-popover/90 backdrop-blur-md shadow-expanded",
+          "app-region-no-drag",
         )}
         role="dialog"
         aria-label="Chat settings"
+        initial={{ opacity: 0, scale: 0.95, y: -8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -8 }}
+        transition={{ type: "spring", stiffness: 400, damping: 28 }}
       >
         <div className="flex items-center gap-2 border-b border-border px-3 py-2.5">
           <SettingsSlidersIcon className="size-4 text-muted-foreground" />
@@ -104,13 +107,20 @@ export const ChatSettingsPanel: React.FC<ChatSettingsPanelProps> = ({
             description="Globally enables page tools in bot conversations (when the page exposes them)."
           />
 
+          <Toggle
+            checked={automationScriptsEnabled}
+            onChange={setAutomationScriptsEnabled}
+            label="Automation scripts"
+            description="Show a popup to save automation scripts when Berry completes browser tasks."
+          />
+
           <div className="rounded-lg border border-dashed border-border/80 px-3 py-2.5">
             <p className="text-xs text-muted-foreground">
               More settings (model, memory, shortcuts) will appear here.
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 };

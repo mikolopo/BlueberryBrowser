@@ -419,7 +419,9 @@ export class LLMClient {
   setMessages(messages: CoreMessage[]): void {
     this.streamToken += 1;
     this.messages = messages;
-    this.sendMessagesToRenderer();
+    // NOTE: intentionally NOT broadcasting here. setMessages is called by the
+    // renderer to restore conversation history — echoing it back would race
+    // against locally-appended messages and wipe them out.
   }
 
   getMessages(): CoreMessage[] {
@@ -480,7 +482,9 @@ export class LLMClient {
   }
 
   private getRecentHistory(): CoreMessage[] {
-    const slice = this.messages.slice(-MAX_HISTORY_MESSAGES);
+    // Filter out undefined/null messages first
+    const validMessages = this.messages.filter((m) => m != null && typeof m === "object");
+    const slice = validMessages.slice(-MAX_HISTORY_MESSAGES);
     if (slice.length > 0 && slice[0]?.role === "assistant") {
       return slice.slice(1);
     }
@@ -505,7 +509,7 @@ export class LLMClient {
   private async prepareMessagesWithContext(
     request: ChatRequest,
   ): Promise<CoreMessage[]> {
-    return buildBerryRequestMessages({
+    const messages = await buildBerryRequestMessages({
       window: this.window,
       agentActivity: this.agentActivity,
       history: this.getRecentHistory(),
@@ -515,6 +519,9 @@ export class LLMClient {
       isCancelled: () => this.runCancelled,
       onTrackTabViewport: (tab) => this.trackTabViewport(tab),
     });
+    
+    // Filter out any undefined/null messages as a final safety check
+    return messages.filter((m) => m != null && typeof m === "object" && m.role && m.content);
   }
 
   private defaultFlightDate(): string {
@@ -540,7 +547,7 @@ export class LLMClient {
       ongoingTasks: this.window?.ongoingTaskService ?? null,
       pageWebMcpTools,
       onActionRecorded: (action) => {
-        if (this.isRecording) {
+        if (this.isRecording || this.isAgentRunning()) {
           this.recordedActions.push(action);
           this.webContents.send("actions-recorded-updated", this.recordedActions);
         }
@@ -891,7 +898,7 @@ export class LLMClient {
     return this.activeAssistantMessageIndex;
   }
 
-  private generateDendritePython(actions: any[]): string {
+  private generateDendritePython(actions: any[], agentResponse?: string): string {
     if (actions.length === 0) return "# No actions recorded.";
     let code = `import asyncio\nfrom dendrite import Dendrite\n\nasync def main():\n    # Initialize Dendrite browser automation client\n    client = Dendrite()\n    \n`;
     const tabMap = new Map<string, string>();
@@ -946,11 +953,15 @@ export class LLMClient {
           break;
       }
     }
+    if (agentResponse && agentResponse.trim()) {
+      const escapedResponse = agentResponse.replace(/"""/g, '\\"\\"\\"');
+      code += `    # Print the extracted information / response\n    print("""${escapedResponse}""")\n\n`;
+    }
     code += `if __name__ == "__main__":\n    asyncio.run(main())\n`;
     return code;
   }
 
-  private generateDendriteTypeScript(actions: any[]): string {
+  private generateDendriteTypeScript(actions: any[], agentResponse?: string): string {
     if (actions.length === 0) return "// No actions recorded.";
     let code = `import { Dendrite } from "dendrite-sdk";\n\nasync function main() {\n  // Initialize Dendrite browser automation client\n  const client = new Dendrite();\n  \n`;
     const tabMap = new Map<string, string>();
@@ -1005,12 +1016,16 @@ export class LLMClient {
           break;
       }
     }
+    if (agentResponse && agentResponse.trim()) {
+      const escapedResponse = agentResponse.replace(/`/g, '\\`').replace(/\${/g, '\\${');
+      code += `  // Print the extracted information / response\n  console.log(\`${escapedResponse}\`);\n\n`;
+    }
     code += `}\n\nmain().catch(console.error);\n`;
     return code;
   }
 
   recordManualAction(action: any): void {
-    if (!this.isRecording) return;
+    if (!this.isRecording && !this.isAgentRunning()) return;
     const last = this.recordedActions[this.recordedActions.length - 1];
     if (
       last &&
@@ -1037,8 +1052,15 @@ export class LLMClient {
     });
 
     try {
+      let i = 0;
       for (const action of actions) {
         if (this.runCancelled) break;
+
+        this.webContents.send("automation-replay-progress", {
+          index: i,
+          total: actions.length,
+          action
+        });
 
         const ctx: BrowserActionContext = {
           window: this.window,
@@ -1081,7 +1103,14 @@ export class LLMClient {
             break;
         }
         await sleep(600);
+        i++;
       }
+
+      this.webContents.send("automation-replay-progress", {
+        index: actions.length,
+        total: actions.length,
+        action: null
+      });
 
       this.agentActivity?.emit({
         kind: "idle",
@@ -1092,6 +1121,11 @@ export class LLMClient {
       return true;
     } catch (err) {
       console.error("Replay failure:", err);
+      this.webContents.send("automation-replay-progress", {
+        index: actions.length,
+        total: actions.length,
+        action: null
+      });
       this.agentActivity?.emit({
         kind: "idle",
         label: `Replay failed: ${String(err)}`,
@@ -1107,7 +1141,6 @@ export class LLMClient {
     messageId: string,
   ): Promise<string> {
     const token = this.streamToken;
-    this.currentAccumulatedText = "";
     const messageIndex = this.allocateAssistantMessageSlot();
 
     for await (const part of stream) {
@@ -1130,13 +1163,16 @@ export class LLMClient {
     }
 
     if (this.recordedActions.length > 0) {
-      const pythonScript = this.generateDendritePython(this.recordedActions);
-      const tsScript = this.generateDendriteTypeScript(this.recordedActions);
-      const payload = JSON.stringify({
+      const pythonScript = this.generateDendritePython(this.recordedActions, this.currentAccumulatedText);
+      const tsScript = this.generateDendriteTypeScript(this.recordedActions, this.currentAccumulatedText);
+      
+      this.webContents.send("script-generated", {
         python: pythonScript,
         typescript: tsScript,
+        actions: [...this.recordedActions]
       });
-      this.currentAccumulatedText += `\n\n---\n### 🤖 Generated Dendrite Automation Script\n\`\`\`dendrite-code\n${payload}\n\`\`\`\n`;
+
+      // The popup toast notifies the user — no need to also append text to the message.
     }
 
     this.currentStatusLine = "";
@@ -1256,12 +1292,11 @@ export class LLMClient {
   }
 
   private updateActiveMessageContent(): void {
-    const messageIndex = this.messages.findLastIndex(
-      (m) => m.role === "assistant",
-    );
-    if (messageIndex === -1) return;
-
-    this.activeAssistantMessageIndex = messageIndex;
+    // Only operate on an explicitly allocated slot. If none is allocated yet
+    // (e.g. a plan update fires between the user-message push and the assistant
+    // slot allocation), do nothing — we must not steal the previous turn's slot.
+    if (this.activeAssistantMessageIndex === null) return;
+    const messageIndex = this.activeAssistantMessageIndex;
 
     const plan = this.agentActivity?.getPlan();
     const checklist = formatPlanChecklist(plan);

@@ -1,6 +1,7 @@
 import { NativeImage, nativeTheme, WebContentsView } from "electron";
 import { getTheme } from "./themeColors";
 import { applyPageDarkModeWithRetry } from "./pageDarkMode";
+import { getNewTabUrl } from "./newTabUrl";
 import {
   buildBerryAssistantInitScriptFromDisk,
   buildBerryActivityScript,
@@ -40,11 +41,11 @@ export class Tab {
 
   constructor(
     id: string,
-    url: string = "https://www.google.com",
+    url?: string,
     options: TabOptions = {},
   ) {
     this._id = id;
-    this._url = url;
+    this._url = url || getNewTabUrl();
     this._title = "New Tab";
     this._getIsDarkMode = options.getIsDarkMode ?? null;
     this._getForcePageDarkMode = options.getForcePageDarkMode ?? null;
@@ -65,7 +66,7 @@ export class Tab {
 
     this.webContentsView.setBackgroundColor(initialBg);
     this.setupEventListeners(options);
-    void this.loadURL(url);
+    void this.loadURL(this._url);
   }
 
   private schedulePageThemeSync(): void {
@@ -160,6 +161,23 @@ export class Tab {
               selector: selector,
               text: el.value
             }));
+          }, true);
+
+          let scrollTimeout;
+          document.addEventListener("scroll", (e) => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+              const el = e.target === document ? document.documentElement : e.target;
+              if (!el) return;
+              let selector = el.tagName.toLowerCase();
+              if (el.id) {
+                selector += "#" + el.id;
+              }
+              console.log("BERRY_MANUAL_ACTION:" + JSON.stringify({
+                type: "scroll",
+                selector: selector
+              }));
+            }, 500);
           }, true);
         })()
       `;
@@ -282,9 +300,35 @@ export class Tab {
     return await this.runJs(`(${runGetTabText.toString()})()`);
   }
 
-  loadURL(url: string): Promise<void> {
+  async loadURL(url: string): Promise<void> {
     this._url = url;
-    return this.webContentsView.webContents.loadURL(url);
+    const wc = this.webContentsView.webContents;
+    let timer: NodeJS.Timeout | null = null;
+
+    const timeoutPromise = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        console.log(`[Tab] loadURL reached 15s timeout for ${url}. Proceeding anyway.`);
+        resolve();
+      }, 15000);
+    });
+
+    const domReadyPromise = new Promise<void>((resolve) => {
+      wc.once("dom-ready", () => {
+        resolve();
+      });
+    });
+
+    try {
+      await Promise.race([
+        wc.loadURL(url).catch((err) => {
+          console.warn(`[Tab] wc.loadURL caught error: ${err.message}. Proceeding.`);
+        }),
+        domReadyPromise,
+        timeoutPromise,
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   goBack(): void {

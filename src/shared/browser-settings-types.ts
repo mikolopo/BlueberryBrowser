@@ -9,6 +9,7 @@ export interface BrowserSettings {
   llmProvider: LlmProvider;
   llmModel: string;
   promptCacheEnabled: boolean;
+  screenPetEnabled: boolean;
 }
 
 export const DEFAULT_BROWSER_SETTINGS: BrowserSettings = {
@@ -16,6 +17,7 @@ export const DEFAULT_BROWSER_SETTINGS: BrowserSettings = {
   llmProvider: "openai",
   llmModel: getDefaultModelForProvider("openai"),
   promptCacheEnabled: true,
+  screenPetEnabled: true,
 };
 
 export function normalizeBrowserSettings(
@@ -41,5 +43,9 @@ export function normalizeBrowserSettings(
       typeof partial?.promptCacheEnabled === "boolean"
         ? partial.promptCacheEnabled
         : DEFAULT_BROWSER_SETTINGS.promptCacheEnabled,
+    screenPetEnabled:
+      typeof partial?.screenPetEnabled === "boolean"
+        ? partial.screenPetEnabled
+        : DEFAULT_BROWSER_SETTINGS.screenPetEnabled,
   };
 }

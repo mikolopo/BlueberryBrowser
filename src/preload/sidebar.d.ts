@@ -120,6 +120,10 @@ interface SidebarAPI {
   getRecordedActions: () => Promise<any[]>;
   onActionsRecordedUpdated: (callback: (actions: any[]) => void) => void;
   removeActionsRecordedUpdatedListener: () => void;
+  onReplayProgress: (callback: (data: { index: number; total: number; action: any }) => void) => void;
+  removeReplayProgressListener: () => void;
+  onScriptGenerated: (callback: (data: { python: string; typescript: string; actions: any[] }) => void) => void;
+  removeScriptGeneratedListener: () => void;
   startRecording: () => Promise<boolean>;
   stopRecording: () => Promise<{ python: string; typescript: string; actions: any[] }>;
   isRecordingActive: () => Promise<boolean>;

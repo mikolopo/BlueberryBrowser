@@ -1,9 +1,12 @@
-import { BaseWindow, nativeTheme, screen, shell } from "electron";
+import { BaseWindow, BrowserWindow, nativeTheme, screen, shell } from "electron";
 import { Tab } from "./Tab";
 import { TopBar } from "./TopBar";
 import { SideBar } from "./SideBar";
 import { TabStrip } from "./TabStrip";
 import { getTheme } from "./themeColors";
+import { is } from "@electron-toolkit/utils";
+import { resolvePreloadPath } from "./resolvePreloadPath";
+import { join } from "path";
 import type { BrowserSettings } from "../shared/browser-settings-types";
 import { getEnvDefaultBrowserSettings } from "./browserSettingsDefaults";
 import { WEBMCP_PROBE_SCRIPT } from "./webmcp/probe";
@@ -14,12 +17,14 @@ import { OngoingTaskService } from "./actions/OngoingTaskService";
 import {
   AI_SIDEBAR_WIDTH,
   getContentHeight,
-  getContentOrigin,
-  getContentWidth,
   getWindowContentSize,
   TAB_STRIP_WIDTH,
+  TAB_STRIP_COLLAPSED_WIDTH,
   TOPBAR_HEIGHT,
+  TOPBAR_SETTINGS_PANEL_HEIGHT,
   setSidebarWidth,
+  getSidebarWidth,
+  CONTENT_EDGE_INSET,
 } from "./windowLayout";
 
 const getInitialWindowBounds = (): {
@@ -48,6 +53,7 @@ export class Window {
   private _tabStrip: TabStrip;
   private _topBar: TopBar;
   private _sideBar: SideBar;
+  private _petWindow: BrowserWindow;
   private _isDarkMode: boolean;
   private _tabStripVisible: boolean = true;
   private _themeHasBeenApplied = false;
@@ -55,6 +61,9 @@ export class Window {
   private _agentActivity: AgentActivityService;
   private _ongoingTaskService: OngoingTaskService;
   private _browserSettings: BrowserSettings = getEnvDefaultBrowserSettings();
+  private layoutAnimationTimer: NodeJS.Timeout | null = null;
+  private currentTabStripWidth = 240;
+  private currentSidebarWidthVal = 400;
 
   constructor() {
     this._isDarkMode = nativeTheme.shouldUseDarkColors;
@@ -79,6 +88,41 @@ export class Window {
     this._topBar = new TopBar(this._baseWindow);
     this._sideBar = new SideBar(this._baseWindow, this._browserSettings);
 
+    // Initialize a small transparent, borderless child BrowserWindow for ScreenPet
+    this._petWindow = new BrowserWindow({
+      width: 48,
+      height: 48,
+      transparent: true,
+      frame: false,
+      alwaysOnTop: true,
+      resizable: false,
+      hasShadow: false,
+      parent: this._baseWindow, // Make it float on top of parent window
+      show: false, // Show inactive so focus remains on the main window
+      focusable: false, // Prevent stealing focus when clicked or dragged!
+      webPreferences: {
+        preload: resolvePreloadPath("sidebar"),
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: false,
+      },
+    });
+
+    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+      void this._petWindow.loadURL(`${process.env["ELECTRON_RENDERER_URL"]}/sidebar/?mode=pet-overlay`);
+    } else {
+      void this._petWindow.loadURL(`file://${join(__dirname, "../renderer/sidebar.html")}?mode=pet-overlay`);
+    }
+
+    this._petWindow.webContents.once("did-finish-load", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed()) {
+        if (this._browserSettings.screenPetEnabled) {
+          this._petWindow.showInactive();
+        }
+        this.sendBoundsToPet();
+      }
+    });
+
     this._agentActivity = new AgentActivityService();
     this._ongoingTaskService = new OngoingTaskService(
       () => this,
@@ -87,6 +131,7 @@ export class Window {
     this._agentActivity.bindRenderers(
       () => this._topBar.view.webContents,
       () => this._sideBar.view.webContents,
+      () => (this._petWindow && !this._petWindow.isDestroyed() ? this._petWindow.webContents : null),
     );
     this._agentActivity.setPageVisualHandler((event) => {
       const tabId = event.tabId ?? this.activeTabId;
@@ -106,14 +151,12 @@ export class Window {
     // Default: pages follow prefers-color-scheme via nativeTheme (Google dark mode, etc.).
     nativeTheme.themeSource = this._isDarkMode ? "dark" : "light";
 
+    this.currentTabStripWidth = this._tabStripVisible ? TAB_STRIP_WIDTH : TAB_STRIP_COLLAPSED_WIDTH;
+    this.currentSidebarWidthVal = this._sideBar.getIsVisible() ? getSidebarWidth() : 0;
+
     this._baseWindow.on("resize", () => {
-      this.updateTabBounds();
-      this._tabStrip.updateBounds(this._tabStripVisible);
-      this._topBar.updateBounds(
-        this._sideBar.getIsVisible(),
-        this._tabStripVisible,
-      );
-      this._sideBar.updateBounds();
+      this.updateAllBounds();
+      this.sendBoundsToPet();
       const bounds = this._baseWindow.getBounds();
       if (this.activeTab) {
         const wc = this.activeTab.webContents;
@@ -126,13 +169,48 @@ export class Window {
       }
     });
 
+    this._baseWindow.on("move", () => {
+      this.sendBoundsToPet();
+    });
+
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
     this._baseWindow.on("closed", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed()) {
+        this._petWindow.destroy();
+      }
       this.tabsMap.forEach((tab) => tab.destroy());
       this.tabsMap.clear();
+    });
+
+    // Hide pet when main window loses focus (user tabs out to another app)
+    this._baseWindow.on("blur", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed()) {
+        this._petWindow.hide();
+      }
+    });
+
+    // Show pet when main window regains focus
+    this._baseWindow.on("focus", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed() && this._browserSettings.screenPetEnabled) {
+        this._petWindow.showInactive();
+      }
+    });
+
+    // Hide pet when main window is minimized
+    this._baseWindow.on("minimize", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed()) {
+        this._petWindow.hide();
+      }
+    });
+
+    // Show pet when main window is restored from minimize
+    this._baseWindow.on("restore", () => {
+      if (this._petWindow && !this._petWindow.isDestroyed() && this._browserSettings.screenPetEnabled) {
+        this._petWindow.showInactive();
+      }
     });
   }
 
@@ -183,6 +261,8 @@ export class Window {
     this.tabsMap.set(tabId, tab);
     this.switchActiveTab(tabId);
     this.broadcastTabsUpdated();
+    
+    this.ensurePetOverlayOnTop();
 
     return tab;
   }
@@ -207,7 +287,7 @@ export class Window {
     }
 
     if (this.tabsMap.size === 0) {
-      this._baseWindow.close();
+      this.createTab();
     }
 
     this.broadcastTabsUpdated();
@@ -230,10 +310,11 @@ export class Window {
     tab.show();
     this.activeTabId = tabId;
     this._baseWindow.setTitle(tab.title || "Blueberry Browser");
-
     this._agentActivity.setViewportUrl(tabId, tab.url, tab.title);
     this._webMcpService.publishActiveTabTools(tabId);
     this.broadcastTabsUpdated();
+
+    this.ensurePetOverlayOnTop();
 
     return true;
   }
@@ -355,16 +436,17 @@ export class Window {
 
   private applyTabBounds(tab: Tab): void {
     const { width, height } = getWindowContentSize(this._baseWindow);
-    const origin = getContentOrigin(this._tabStripVisible);
+    const contentLeft = this.currentTabStripWidth;
+    const sidebarWidth = this.currentSidebarWidthVal;
+
+    const contentWidth = width - contentLeft - sidebarWidth - (sidebarWidth > 0 ? 0 : CONTENT_EDGE_INSET);
+    const contentHeight = getContentHeight(height);
+
     tab.view.setBounds({
-      x: origin.x,
-      y: origin.y,
-      width: getContentWidth(
-        width,
-        this._sideBar.getIsVisible(),
-        this._tabStripVisible,
-      ),
-      height: getContentHeight(height),
+      x: contentLeft,
+      y: TOPBAR_HEIGHT,
+      width: Math.max(0, contentWidth),
+      height: contentHeight,
     });
   }
 
@@ -373,16 +455,141 @@ export class Window {
   }
 
   updateAllBounds(): void {
-    const sidebarVisible = this._sideBar.getIsVisible();
+    this.ensureInitialTab();
+    const { width, height } = getWindowContentSize(this._baseWindow);
+    const contentLeft = this.currentTabStripWidth;
+    const sidebarWidth = this.currentSidebarWidthVal;
+
+    // 1. Update tab bounds
     this.updateTabBounds();
-    this._tabStrip.updateBounds(this._tabStripVisible);
-    this._topBar.updateBounds(sidebarVisible, this._tabStripVisible);
-    this._sideBar.updateBounds();
+
+    // 2. Update tab strip bounds using animated width
+    this._tabStrip.view.setBounds({
+      x: 0,
+      y: 0,
+      width: this.currentTabStripWidth,
+      height,
+    });
+
+    // 3. Update topbar bounds using animated widths
+    const topBarWidth = width - contentLeft - (sidebarWidth > 0 ? sidebarWidth : 0) - (sidebarWidth > 0 ? 0 : CONTENT_EDGE_INSET);
+    this._topBar.view.setBounds({
+      x: contentLeft,
+      y: 0,
+      width: Math.max(0, topBarWidth),
+      height: TOPBAR_HEIGHT + (this._topBar["_settingsPanelOpen"] ? TOPBAR_SETTINGS_PANEL_HEIGHT : 0),
+    });
+
+    // 4. Update sidebar bounds using animated width
+    const contentHeight = getContentHeight(height);
+    if (sidebarWidth > 0) {
+      this._sideBar.view.setVisible(true);
+      this._sideBar.view.setBounds({
+        x: width - sidebarWidth,
+        y: TOPBAR_HEIGHT,
+        width: sidebarWidth,
+        height: contentHeight,
+      });
+    } else {
+      this._sideBar.view.setVisible(false);
+      this._sideBar.view.setBounds({
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+      });
+    }
+
+    // 5. Update pet bounds synced from parent window
+    this.sendBoundsToPet();
+  }
+
+  private ensurePetOverlayOnTop(): void {
+    // Child BrowserWindow is managed natively by Electron on top of parent window.
+  }
+
+  sendBoundsToPet(): void {
+    if (this._petWindow && !this._petWindow.isDestroyed()) {
+      const bounds = this._baseWindow.getBounds();
+      this._petWindow.webContents.send("main-window-bounds", {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+      });
+    }
+  }
+
+  movePet(x: number, y: number): void {
+    if (this._petWindow && !this._petWindow.isDestroyed()) {
+      const mainBounds = this._baseWindow.getBounds();
+      const currentBounds = this._petWindow.getBounds();
+      this._petWindow.setBounds({
+        x: Math.round(mainBounds.x + x),
+        y: Math.round(mainBounds.y + y),
+        width: currentBounds.width,
+        height: currentBounds.height,
+      });
+    }
+  }
+
+  setPetSize(width: number, height: number): void {
+    if (this._petWindow && !this._petWindow.isDestroyed()) {
+      const currentBounds = this._petWindow.getBounds();
+      this._petWindow.setBounds({
+        x: currentBounds.x,
+        y: currentBounds.y,
+        width,
+        height,
+      });
+    }
+  }
+
+  private animateLayout(): void {
+    if (this.layoutAnimationTimer) {
+      clearInterval(this.layoutAnimationTimer);
+      this.layoutAnimationTimer = null;
+    }
+
+    const targetTabStripWidth = this._tabStripVisible ? TAB_STRIP_WIDTH : TAB_STRIP_COLLAPSED_WIDTH;
+    const targetSidebarWidth = this._sideBar.getIsVisible() ? getSidebarWidth() : 0;
+
+    const duration = 180; // ms
+    const stepTime = 10;  // ms
+    const totalSteps = duration / stepTime;
+    let step = 0;
+
+    const startTabStripWidth = this.currentTabStripWidth;
+    const startSidebarWidth = this.currentSidebarWidthVal;
+
+    this.layoutAnimationTimer = setInterval(() => {
+      step++;
+      const t = step / totalSteps;
+      // easeOutQuad
+      const ease = t * (2 - t);
+
+      this.currentTabStripWidth = Math.round(
+        startTabStripWidth + (targetTabStripWidth - startTabStripWidth) * ease
+      );
+      this.currentSidebarWidthVal = Math.round(
+        startSidebarWidth + (targetSidebarWidth - startSidebarWidth) * ease
+      );
+
+      this.updateAllBounds();
+
+      if (step >= totalSteps) {
+        clearInterval(this.layoutAnimationTimer!);
+        this.layoutAnimationTimer = null;
+        this.currentTabStripWidth = targetTabStripWidth;
+        this.currentSidebarWidthVal = targetSidebarWidth;
+        this.updateAllBounds();
+      }
+    }, stepTime);
   }
 
   toggleTabStrip(): boolean {
     this._tabStripVisible = !this._tabStripVisible;
-    this.updateAllBounds();
+    this.animateLayout();
     this.broadcastTabStripVisibility(this._tabStripVisible);
     return this._tabStripVisible;
   }
@@ -424,9 +631,21 @@ export class Window {
   }
 
   applyBrowserSettings(settings: BrowserSettings): void {
+    const prevPetEnabled = this._browserSettings.screenPetEnabled;
     this._browserSettings = { ...settings };
     this.applyPageThemeToAllTabs();
     this._sideBar.client.applyBrowserSettings(settings);
+
+    // Show or hide the pet window when the setting changes
+    if (settings.screenPetEnabled !== prevPetEnabled) {
+      if (this._petWindow && !this._petWindow.isDestroyed()) {
+        if (settings.screenPetEnabled && this._baseWindow.isFocused()) {
+          this._petWindow.showInactive();
+        } else if (!settings.screenPetEnabled) {
+          this._petWindow.hide();
+        }
+      }
+    }
   }
 
   getBrowserSettings(): BrowserSettings {
@@ -465,13 +684,14 @@ export class Window {
 
   toggleSidebar(): boolean {
     const visible = this._sideBar.toggle();
-    this.updateAllBounds();
+    this.animateLayout();
     this.broadcastSidebarVisibility(visible);
     return visible;
   }
 
   resizeSidebar(width: number): void {
     setSidebarWidth(width);
+    this.currentSidebarWidthVal = width;
     this.updateAllBounds();
   }
 

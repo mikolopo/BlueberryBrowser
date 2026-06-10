@@ -3,9 +3,9 @@ import { Trash2, X } from "lucide-react";
 import { cn } from "@common/lib/utils";
 import type { ChatSession } from "../lib/chatHistoryStorage";
 import { ChatHistoryIcon } from "./icons/ChatHistoryIcon";
+import { motion } from "framer-motion";
 
 interface ChatHistoryPanelProps {
-  open: boolean;
   onClose: () => void;
   sessions: ChatSession[];
   activeSessionId: string | null;
@@ -33,7 +33,6 @@ function formatWhen(ts: number): string {
 }
 
 export const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
-  open,
   onClose,
   sessions,
   activeSessionId,
@@ -43,36 +42,40 @@ export const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) return;
-
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
 
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   const sorted = [...sessions].sort((a, b) => b.updatedAt - a.updatedAt);
 
   return (
     <>
-      <div
-        className="absolute inset-0 z-20 bg-background/60 backdrop-blur-[2px] animate-panel-fade app-region-no-drag"
+      <motion.div
+        className="absolute inset-0 z-20 bg-background/40 backdrop-blur-[1px] app-region-no-drag"
         onClick={onClose}
         aria-hidden
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
       />
-      <aside
+      <motion.aside
         ref={panelRef}
         className={cn(
           "absolute inset-y-0 left-0 z-30 flex w-[min(100%,16rem)] flex-col",
-          "border-r border-border bg-popover shadow-expanded",
-          "animate-slide-in-left app-region-no-drag",
+          "border-r border-border bg-popover/90 backdrop-blur-md shadow-expanded",
+          "app-region-no-drag",
         )}
         role="dialog"
         aria-label="Chat history"
+        initial={{ x: "-100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "-100%" }}
+        transition={{ type: "spring", stiffness: 350, damping: 30 }}
       >
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
           <div className="flex items-center gap-2 min-w-0">
@@ -142,7 +145,7 @@ export const ChatHistoryPanel: React.FC<ChatHistoryPanelProps> = ({
             </ul>
           )}
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 };

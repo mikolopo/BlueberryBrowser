@@ -4,31 +4,21 @@ import {
   ArrowRight,
   RefreshCw,
   Loader2,
-  Sparkles,
-  Settings,
 } from "lucide-react";
 import { useBrowser } from "@common/contexts/BrowserContext";
 import { ToolBarButton } from "../components/ToolBarButton";
 import { Favicon } from "@common/components/Favicon";
-import { DarkModeToggle } from "../components/DarkModeToggle";
 import { cn } from "@common/lib/utils";
 import { normalizeNavigationUrl } from "@common/lib/navigationUrl";
+import { BerrySprite } from "@common/components/BerrySprite";
 
-interface AddressBarProps {
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-  settingsOpen: boolean;
-  settingsTriggerRef: React.RefObject<HTMLButtonElement | null>;
-  onToggleSettings: () => void;
-}
+const isNewTabUrl = (urlStr: string): boolean => {
+  return !urlStr || urlStr.includes("/newtab/index.html") || urlStr === "about:blank";
+};
 
-export const AddressBar: React.FC<AddressBarProps> = ({
-  isDarkMode,
-  onToggleDarkMode,
-  settingsOpen,
-  settingsTriggerRef,
-  onToggleSettings,
-}) => {
+interface AddressBarProps {}
+
+export const AddressBar: React.FC<AddressBarProps> = () => {
   const {
     activeTab,
     navigateToUrl,
@@ -70,7 +60,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   // Update URL when active tab changes
   useEffect(() => {
     if (activeTab && !isEditing) {
-      setUrl(activeTab.url || "");
+      setUrl(isNewTabUrl(activeTab.url) ? "" : activeTab.url || "");
     }
   }, [activeTab, isEditing]);
 
@@ -94,7 +84,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
     setIsFocused(false);
     // Reset to current tab URL if editing was cancelled
     if (activeTab) {
-      setUrl(activeTab.url || "");
+      setUrl(isNewTabUrl(activeTab.url) ? "" : activeTab.url || "");
     }
   };
 
@@ -103,7 +93,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
       setIsEditing(false);
       setIsFocused(false);
       if (activeTab) {
-        setUrl(activeTab.url || "");
+        setUrl(isNewTabUrl(activeTab.url) ? "" : activeTab.url || "");
       }
       (e.target as HTMLInputElement).blur();
     }
@@ -151,7 +141,7 @@ export const AddressBar: React.FC<AddressBarProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2 w-full min-w-0 h-12">
+    <div className="flex items-center gap-2 w-full min-w-0 h-12 relative">
       {/* Navigation Controls */}
       <div className="flex gap-1.5 app-region-no-drag shrink-0">
         <ToolBarButton
@@ -193,7 +183,11 @@ export const AddressBar: React.FC<AddressBarProps> = ({
               onKeyDown={handleKeyDown}
               className="w-full px-1 py-0.5 text-xs outline-none bg-transparent text-foreground truncate"
               placeholder={
-                activeTab ? "Enter URL or search term" : "No active tab"
+                activeTab
+                  ? isNewTabUrl(activeTab.url)
+                    ? "Search or enter URL"
+                    : "Enter URL or search term"
+                  : "No active tab"
               }
               disabled={!activeTab}
               spellCheck={false}
@@ -221,17 +215,21 @@ export const AddressBar: React.FC<AddressBarProps> = ({
             {/* URL Display */}
             <div className="text-[0.8rem] leading-normal truncate flex-1">
               {activeTab ? (
-                <>
-                  <span className="text-foreground dark:text-foreground">
-                    {getDomain()}
-                  </span>
-                  <span className="group-hover/address-bar:hidden text-muted-foreground/60">
-                    {activeTab.title && ` / ${activeTab.title}`}
-                  </span>
-                  <span className="group-hover/address-bar:inline hidden text-muted-foreground/60">
-                    {getPath()}
-                  </span>
-                </>
+                isNewTabUrl(activeTab.url) ? (
+                  <span className="text-muted-foreground">Search or enter URL</span>
+                ) : (
+                  <>
+                    <span className="text-foreground dark:text-foreground">
+                      {getDomain()}
+                    </span>
+                    <span className="group-hover/address-bar:hidden text-muted-foreground/60">
+                      {activeTab.title && ` / ${activeTab.title}`}
+                    </span>
+                    <span className="group-hover/address-bar:inline hidden text-muted-foreground/60">
+                      {getPath()}
+                    </span>
+                  </>
+                )
               ) : (
                 <span className="text-muted-foreground">No active tab</span>
               )}
@@ -246,28 +244,12 @@ export const AddressBar: React.FC<AddressBarProps> = ({
       {/* Actions Menu */}
       <div className="relative z-20 flex items-center gap-1 app-region-no-drag shrink-0">
         <ToolBarButton
-          Icon={Sparkles}
           onClick={toggleSidebar}
           toggled={isSidebarOpen}
           title="Toggle AI sidebar"
-        />
-        <button
-          ref={settingsTriggerRef}
-          type="button"
-          onClick={onToggleSettings}
-          title="Browser settings"
-          aria-label="Browser settings"
-          aria-expanded={settingsOpen}
-          className={cn(
-            "flex items-center justify-center size-8 rounded-md transition-colors",
-            settingsOpen
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-          )}
         >
-          <Settings className="size-4" />
-        </button>
-        <DarkModeToggle isDarkMode={isDarkMode} onToggle={onToggleDarkMode} />
+          <BerrySprite size={18} animated={isSidebarOpen} kind={isSidebarOpen ? "responding" : "idle"} />
+        </ToolBarButton>
       </div>
     </div>
   );

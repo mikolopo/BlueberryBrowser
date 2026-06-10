@@ -7,7 +7,7 @@ export const TAB_STRIP_COLLAPSED_WIDTH = 40;
 export const TOPBAR_MAIN_HEIGHT = 48;
 export const TOPBAR_HEIGHT = TOPBAR_MAIN_HEIGHT;
 /** Extra height for the top bar WebContentsView when the settings dropdown is open. */
-export const TOPBAR_SETTINGS_PANEL_HEIGHT = 320;
+export const TOPBAR_SETTINGS_PANEL_HEIGHT = 520;
 
 let currentSidebarWidth = 400;
 

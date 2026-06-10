@@ -22,6 +22,7 @@ export const buildBerryAssistantInitScript = (frames: string[]): string => {
   style.textContent = [
     "#berry-assistant-root { pointer-events:none; position:fixed; inset:0; z-index:2147483646; overflow:hidden; }",
     "#berry-assistant-hero {",
+    "  display:none !important;",
     "  position:fixed; left:0; top:0; width:56px; height:56px;",
     "  z-index:2147483647; pointer-events:none; opacity:0;",
     "  filter:drop-shadow(0 6px 16px rgba(99,102,241,0.4));",

@@ -14,6 +14,32 @@ import { cn } from "@common/lib/utils";
 import { isSafeExternalUrl } from "@common/lib/safeUrl";
 import { TypingIndicator } from "./TypingIndicator";
 
+/** Idle animation for the empty state — cycles through the walking sprite frames slowly. */
+const IDLE_FRAMES = ["003", "004", "005", "006", "007", "008", "009", "010"];
+const IDLE_FRAME_MS = 180;
+
+const BerryIdleAnimation: React.FC = () => {
+  const [frameIdx, setFrameIdx] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setFrameIdx((prev) => (prev + 1) % IDLE_FRAMES.length);
+    }, IDLE_FRAME_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
+  return (
+    <img
+      src={`/sprite/blueberry_sprites/blueberry_${IDLE_FRAMES[frameIdx]}.png`}
+      alt="Berry"
+      width={56}
+      height={56}
+      className="mx-auto object-contain drop-shadow-sm"
+      draggable={false}
+    />
+  );
+};
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -410,16 +436,10 @@ export const Chat: React.FC = () => {
           {messages.length === 0 ? (
             <div className="flex min-h-[200px] items-center justify-center py-8">
               <div className="mx-auto flex max-w-md flex-col gap-3 text-center animate-fade-in">
-                <div className="mx-auto size-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="size-3 rounded-full bg-primary animate-pulse-soft" />
-                </div>
+                <BerryIdleAnimation />
                 <h3 className="text-sm font-semibold text-foreground">
                   Blueberry Assistant
                 </h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Ask about the page, navigation, or WebMCP actions. Enable
-                  WebMCP in settings (sliders icon) and open /demo/index.html.
-                </p>
               </div>
             </div>
           ) : (

@@ -132,6 +132,18 @@ const sidebarAPI = {
   removeActionsRecordedUpdatedListener: () => {
     ipcRenderer.removeAllListeners("actions-recorded-updated");
   },
+  onReplayProgress: (callback: (data: { index: number; total: number; action: any }) => void) => {
+    ipcRenderer.on("automation-replay-progress", (_, data) => callback(data));
+  },
+  removeReplayProgressListener: () => {
+    ipcRenderer.removeAllListeners("automation-replay-progress");
+  },
+  onScriptGenerated: (callback: (data: { python: string; typescript: string; actions: any[] }) => void) => {
+    ipcRenderer.on("script-generated", (_, data) => callback(data));
+  },
+  removeScriptGeneratedListener: () => {
+    ipcRenderer.removeAllListeners("script-generated");
+  },
 
   startRecording: () => ipcRenderer.invoke("sidebar-start-recording"),
   stopRecording: () => ipcRenderer.invoke("sidebar-stop-recording"),
@@ -141,6 +153,17 @@ const sidebarAPI = {
   },
   removeRecordingStateChangedListener: () => {
     ipcRenderer.removeAllListeners("recording-state-changed");
+  },
+
+  // ScreenPet window syncing
+  movePet: (x: number, y: number) => ipcRenderer.send("move-pet", { x, y }),
+  setPetSize: (size: number | { width: number; height: number }) => ipcRenderer.send("set-pet-size", size),
+  getMainWindowBounds: () => ipcRenderer.invoke("get-main-window-bounds"),
+  onMainWindowBounds: (callback: (bounds: { x: number; y: number; width: number; height: number }) => void) => {
+    ipcRenderer.on("main-window-bounds", (_, bounds) => callback(bounds));
+  },
+  removeMainWindowBoundsListener: () => {
+    ipcRenderer.removeAllListeners("main-window-bounds");
   },
 };
 

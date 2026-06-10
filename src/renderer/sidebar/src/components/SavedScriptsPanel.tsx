@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@common/lib/utils";
 import { Play, Copy, Trash2, X, Terminal, Radio, Save } from "lucide-react";
+import { BerrySprite } from "@common/components/BerrySprite";
+import type { AgentActivityKind } from "@shared/agent-activity-types";
+import { motion } from "framer-motion";
 
 interface SavedScript {
   id: string;
@@ -12,19 +15,43 @@ interface SavedScript {
 }
 
 interface SavedScriptsPanelProps {
-  open: boolean;
   onClose: () => void;
 }
 
-export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onClose }) => {
+const getActionMood = (actionType: string): AgentActivityKind => {
+  switch (actionType) {
+    case "click": return "clicking";
+    case "type": return "tool_running";
+    case "scroll": return "reading_page";
+    case "navigate":
+    case "tabCreate":
+    case "tabSwitch":
+    case "tabClose":
+      return "navigating";
+    case "search":
+      return "thinking";
+    default:
+      return "idle";
+  }
+};
+
+export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ onClose }) => {
   const [scripts, setScripts] = useState<SavedScript[]>([]);
   const [activeTab, setActiveTab] = useState<"python" | "typescript">("python");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [replayingId, setReplayingId] = useState<string | null>(null);
 
+  // Replay progress states
+  const [replayProgress, setReplayProgress] = useState<{
+    index: number;
+    total: number;
+    action: any;
+  } | null>(null);
+
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
   const [recordedActions, setRecordedActions] = useState<any[]>([]);
+  const [recordingMood, setRecordingMood] = useState<AgentActivityKind>("idle");
   const [stoppedResult, setStoppedResult] = useState<{
     python: string;
     typescript: string;
@@ -62,16 +89,36 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
 
     window.sidebarAPI.onActionsRecordedUpdated((actions) => {
       setRecordedActions(actions);
+      if (actions.length > 0) {
+        const lastAction = actions[actions.length - 1];
+        setRecordingMood(getActionMood(lastAction.type));
+      }
+    });
+
+    window.sidebarAPI.onReplayProgress((data) => {
+      setReplayProgress(data);
     });
 
     return () => {
       window.removeEventListener("saved-scripts-updated", loadScripts);
       window.sidebarAPI.removeRecordingStateChangedListener();
       window.sidebarAPI.removeActionsRecordedUpdatedListener();
+      window.sidebarAPI.removeReplayProgressListener();
     };
   }, []);
 
-  if (!open) return null;
+  useEffect(() => {
+    if (recordedActions.length === 0) {
+      setRecordingMood("idle");
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRecordingMood("idle");
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [recordedActions.length]);
+
+  // open prop removed; visibility controlled by parent mount
 
   const handleStartRecording = async () => {
     setRecordedActions([]);
@@ -118,12 +165,14 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
   const handleRun = async (script: SavedScript) => {
     if (replayingId) return;
     setReplayingId(script.id);
+    setReplayProgress({ index: 0, total: script.actions.length, action: null });
     try {
       await window.sidebarAPI.runActions(script.actions);
     } catch (e) {
       console.error("Failed to replay script:", e);
     } finally {
       setReplayingId(null);
+      setReplayProgress(null);
     }
   };
 
@@ -145,7 +194,13 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
   };
 
   return (
-    <div className="absolute inset-0 z-40 flex flex-col bg-background/95 backdrop-blur-md animate-in slide-in-from-right duration-200">
+    <motion.div
+      className="absolute inset-0 z-40 flex flex-col bg-background/85 backdrop-blur-md shadow-expanded"
+      initial={{ x: "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: "100%" }}
+      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/30">
         <div className="flex items-center gap-2">
@@ -164,11 +219,25 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
         {/* Recording Console Card */}
         <div className="border border-border/80 dark:border-border/30 rounded-xl p-4 bg-card/60 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Radio className={cn("size-4", isRecording ? "text-red-500 animate-pulse" : "text-muted-foreground")} />
-              <span className="text-xs font-bold text-foreground">
-                {isRecording ? "Recording User Actions..." : "Record Actions"}
-              </span>
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-muted/40 rounded-lg border border-border/20">
+                <BerrySprite
+                  kind={isRecording ? recordingMood : "idle"}
+                  animated={true}
+                  size={28}
+                />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <Radio className={cn("size-3.5", isRecording ? "text-red-500 animate-pulse" : "text-muted-foreground")} />
+                  <span className="text-xs font-bold text-foreground">
+                    {isRecording ? "Recording User Actions" : "Record Actions"}
+                  </span>
+                </div>
+                <span className="text-[9px] text-muted-foreground">
+                  {isRecording ? "Berry is mimicking your input" : "Save your click & key patterns"}
+                </span>
+              </div>
             </div>
             {isRecording && (
               <span className="text-[10px] bg-red-500/10 text-red-500 font-semibold px-2 py-0.5 rounded-full">
@@ -322,6 +391,43 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
                   </button>
                 </div>
 
+                {replayingId === script.id && (
+                  <div className="flex items-center gap-3 bg-muted/30 p-2.5 rounded-lg border border-border/20 animate-in slide-in-from-top-2 duration-200">
+                    <div className="p-1 bg-muted/60 rounded-md">
+                      <BerrySprite
+                        kind={replayProgress?.action ? getActionMood(replayProgress.action.type) : "thinking"}
+                        animated={true}
+                        size={28}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between text-[10px] text-muted-foreground mb-1 font-medium">
+                        <span className="truncate capitalize font-semibold text-foreground/80">
+                          {replayProgress?.action?.type ? `Action: ${replayProgress.action.type}` : "Preparing..."}
+                        </span>
+                        <span>
+                          {replayProgress 
+                            ? `${replayProgress.index}/${replayProgress.total}`
+                            : ""
+                          }
+                        </span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-primary h-full transition-all duration-300"
+                          style={{
+                            width: `${
+                              replayProgress && replayProgress.total > 0
+                                ? Math.round((replayProgress.index / replayProgress.total) * 100)
+                                : 0
+                            }%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleRun(script)}
@@ -356,6 +462,6 @@ export const SavedScriptsPanel: React.FC<SavedScriptsPanelProps> = ({ open, onCl
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };

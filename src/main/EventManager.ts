@@ -41,12 +41,16 @@ const IPC_HANDLE_CHANNELS = [
   "webmcp-consent-response",
   "webmcp-get-consented-origins",
   "webmcp-revoke-consent",
+  "get-main-window-bounds",
 ] as const;
 
 const IPC_ON_CHANNELS = [
   "dark-mode-changed",
   "browser-settings-changed",
   "topbar-settings-panel-changed",
+  "settings-toggle-request",
+  "move-pet",
+  "set-pet-size",
 ] as const;
 
 export class EventManager {
@@ -238,7 +242,11 @@ export class EventManager {
 
     // Restore chat messages (session switch)
     ipcMain.handle("sidebar-set-messages", (_, messages) => {
-      this.mainWindow.sidebar.client.setMessages(messages ?? []);
+      // Filter out undefined/null messages to prevent LLM errors
+      const validMessages = Array.isArray(messages)
+        ? messages.filter((m) => m != null && typeof m === "object")
+        : [];
+      this.mainWindow.sidebar.client.setMessages(validMessages);
       return true;
     });
 
@@ -271,6 +279,16 @@ export class EventManager {
     ipcMain.handle("sidebar-resize", (_, width: number) => {
       this.mainWindow.resizeSidebar(width);
       return true;
+    });
+
+    ipcMain.handle("get-main-window-bounds", () => {
+      const bounds = this.mainWindow.getBounds();
+      return {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+      };
     });
   }
 
@@ -336,6 +354,24 @@ export class EventManager {
     ipcMain.on("topbar-settings-panel-changed", (_, open: boolean) => {
       if (typeof open !== "boolean") return;
       this.mainWindow.setTopBarSettingsPanelOpen(open);
+    });
+
+    ipcMain.on("settings-toggle-request", () => {
+      this.mainWindow.topBar.view.webContents.send("settings-toggle-request");
+    });
+
+    ipcMain.on("move-pet", (_, data: { x: number; y: number }) => {
+      if (data && typeof data.x === "number" && typeof data.y === "number") {
+        this.mainWindow.movePet(data.x, data.y);
+      }
+    });
+
+    ipcMain.on("set-pet-size", (_, data: { width: number; height: number } | number) => {
+      if (typeof data === "number") {
+        this.mainWindow.setPetSize(data, data);
+      } else if (data && typeof data.width === "number" && typeof data.height === "number") {
+        this.mainWindow.setPetSize(data.width, data.height);
+      }
     });
   }
 

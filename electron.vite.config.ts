@@ -58,6 +58,7 @@ export default defineConfig({
           topbar: resolve(root, "src/renderer/topbar/index.html"),
           sidebar: resolve(root, "src/renderer/sidebar/index.html"),
           tabstrip: resolve(root, "src/renderer/tabstrip/index.html"),
+          newtab: resolve(root, "src/renderer/newtab/index.html"),
         },
       },
     },

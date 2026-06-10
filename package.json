@@ -35,6 +35,7 @@
     "clsx": "^2.1.1",
     "darkreader": "^4.9.125",
     "dotenv": "^17.2.2",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

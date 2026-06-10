@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { WebMcpConsentRequest } from "@shared/webmcp-types";
+import { motion } from "framer-motion";
 
 interface WebMcpConsentModalProps {
   request: WebMcpConsentRequest | null;
@@ -29,11 +30,21 @@ export const WebMcpConsentModal: React.FC<WebMcpConsentModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3">
-      <div
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
         role="dialog"
         aria-modal="true"
         className="w-full max-w-sm rounded-lg border border-border bg-background p-4 shadow-lg"
+        initial={{ y: "100%", opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: "100%", opacity: 0 }}
+        transition={{ type: "spring", stiffness: 350, damping: 30 }}
       >
         <h3 className="text-sm font-semibold text-foreground">
           Allow WebMCP tool?
@@ -79,7 +90,7 @@ export const WebMcpConsentModal: React.FC<WebMcpConsentModalProps> = ({
             Allow
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };

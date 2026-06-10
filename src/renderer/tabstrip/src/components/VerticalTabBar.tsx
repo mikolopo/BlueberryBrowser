@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, X, Settings, Sun, Moon } from "lucide-react";
 import { useBrowser } from "@common/contexts/BrowserContext";
 import { Favicon } from "@common/components/Favicon";
 import { cn } from "@common/lib/utils";
+import { useDarkMode } from "@common/hooks/useDarkMode";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface VerticalTabItemProps {
   title: string;
@@ -37,6 +39,12 @@ const VerticalTabItem: React.FC<VerticalTabItemProps> = ({
       <button
         type="button"
         onClick={onActivate}
+        onAuxClick={(e) => {
+          if (e.button === 1) {
+            e.preventDefault();
+            onClose();
+          }
+        }}
         className={cn(
           "app-region-no-drag w-full flex items-center gap-2.5 rounded-lg px-2 py-2 text-left",
           "transition-all duration-150",
@@ -93,9 +101,51 @@ const getFavicon = (url: string) => {
   }
 };
 
+const SettingsButton: React.FC<{
+  onClick: () => void;
+  className?: string;
+}> = ({ onClick, className }) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex items-center justify-center transition-colors",
+        className
+      )}
+    >
+      <Settings className="size-4 text-muted-foreground group-hover:text-foreground transition-transform duration-700 ease-out group-hover:rotate-180" />
+    </button>
+  );
+};
+
+const ThemeButton: React.FC<{
+  onClick: () => void;
+  isDarkMode: boolean;
+  className?: string;
+}> = ({ onClick, isDarkMode, className }) => {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex items-center justify-center transition-colors",
+        className
+      )}
+    >
+      {isDarkMode ? (
+        <Sun className="size-4 text-muted-foreground group-hover:text-foreground transition-all duration-300 group-hover:scale-110 group-hover:rotate-45" />
+      ) : (
+        <Moon className="size-4 text-muted-foreground group-hover:text-foreground transition-all duration-300 group-hover:scale-110 group-hover:-rotate-12" />
+      )}
+    </button>
+  );
+};
+
 export const VerticalTabBar: React.FC = () => {
   const { tabs, createTab, closeTab, switchTab } = useBrowser();
   const [expanded, setExpanded] = useState(true);
+  const { isDarkMode, toggleDarkMode } = useDarkMode("master");
 
   useEffect(() => {
     const handleVisibility = (_event: unknown, visible: unknown) => {
@@ -125,7 +175,7 @@ export const VerticalTabBar: React.FC = () => {
 
   if (!expanded) {
     return (
-      <div className="h-full flex flex-col min-h-0 items-center">
+      <div className="h-full flex flex-col min-h-0 items-center bg-[rgb(var(--tab-strip))] relative">
         <div className="h-12 shrink-0 w-full app-region-drag flex items-center justify-center border-b border-border">
           <button
             type="button"
@@ -141,13 +191,39 @@ export const VerticalTabBar: React.FC = () => {
             <ChevronRight className="size-4" />
           </button>
         </div>
+
+        {/* Stacked settings & dark mode buttons when collapsed */}
+        <div className="flex flex-col items-center gap-3.5 mt-4">
+          <SettingsButton
+            onClick={() => window.electron?.ipcRenderer.send("settings-toggle-request")}
+            className="app-region-no-drag size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+          />
+          <ThemeButton
+            onClick={toggleDarkMode}
+            isDarkMode={isDarkMode}
+            className="app-region-no-drag size-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+          />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col min-h-0">
-      <div className="h-12 shrink-0 flex items-center justify-end px-1.5 app-region-drag border-b border-border">
+    <div className="h-full flex flex-col min-h-0 relative">
+      <div className="h-12 shrink-0 flex items-center justify-between px-3 app-region-drag border-b border-border">
+        {/* Horizontal settings & dark mode controls when expanded */}
+        <div className="flex items-center gap-1.5 app-region-no-drag">
+          <ThemeButton
+            onClick={toggleDarkMode}
+            isDarkMode={isDarkMode}
+            className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+          />
+          <SettingsButton
+            onClick={() => window.electron?.ipcRenderer.send("settings-toggle-request")}
+            className="size-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
+          />
+        </div>
+
         <button
           type="button"
           aria-label="Hide tabs"
@@ -164,24 +240,35 @@ export const VerticalTabBar: React.FC = () => {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-1 app-region-no-drag">
-        <div className="space-y-0.5">
-          {tabs.map((tab) => (
-            <VerticalTabItem
-              key={tab.id}
-              title={tab.title}
-              url={tab.url}
-              favicon={getFavicon(tab.url)}
-              isActive={tab.isActive}
-              onClose={() => closeTab(tab.id)}
-              onActivate={() => !tab.isActive && switchTab(tab.id)}
-            />
-          ))}
+        <div className="space-y-0.5 relative">
+          <AnimatePresence initial={false}>
+            {tabs.map((tab) => (
+              <motion.div
+                key={tab.id}
+                layout
+                initial={{ opacity: 0, height: 0, scale: 0.96 }}
+                animate={{ opacity: 1, height: "auto", scale: 1 }}
+                exit={{ opacity: 0, height: 0, scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                style={{ overflow: "hidden" }}
+              >
+                <VerticalTabItem
+                  title={tab.title}
+                  url={tab.url}
+                  favicon={getFavicon(tab.url)}
+                  isActive={tab.isActive}
+                  onClose={() => closeTab(tab.id)}
+                  onActivate={() => !tab.isActive && switchTab(tab.id)}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
         <div className="px-2 pt-1">
           <button
             type="button"
-            onClick={() => createTab("https://www.google.com")}
+            onClick={() => createTab()}
             className={cn(
               "w-full flex items-center gap-2 rounded-lg px-2 py-2",
               "text-xs text-muted-foreground hover:text-foreground",

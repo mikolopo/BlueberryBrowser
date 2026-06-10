@@ -1,19 +1,19 @@
 /** Native shell colors synced with CSS theme tokens in renderer/common/styles/theme.css */
 export const APP_THEME = {
   light: {
-    windowBg: "#FAFAFC",
+    windowBg: "#FCF9FF",
     contentBg: "#FFFFFF",
     titleBarOverlay: {
-      color: "#FFFFFF",
+      color: "#FCF9FF",
       symbolColor: "#18181B",
       height: 48,
     },
   },
   dark: {
-    windowBg: "#09090B",
+    windowBg: "#120F1A",
     contentBg: "#09090B",
     titleBarOverlay: {
-      color: "#0F0F12",
+      color: "#120F1A",
       symbolColor: "#FAFAFA",
       height: 48,
     },

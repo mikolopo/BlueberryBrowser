@@ -105,11 +105,23 @@ export const buildDynamicContextBlock = (
     );
   } else if (input.toolsActive) {
     lines.push(
-      "WebMCP ACTIVE — prefer these structured tools when the task matches (over browserClick on same action):",
+      "⚠️ WEBMCP ACTIVE — MANDATORY USE OF STRUCTURED TOOLS ⚠️",
+      "The current page exposes native WebMCP tools. You MUST use these tools instead of browserClick/browserType for actions they cover.",
+      "WebMCP tools are the site's structured API — they are faster, more reliable, and purpose-built for these actions.",
+      "",
+      "AVAILABLE TOOLS (use these INSTEAD of clicking/typing):",
       input.webMcpTools
-        .map((t) => `- ${t.name}: ${t.description || "no description"}`)
+        .map((t) => `  • ${t.name}: ${t.description || "no description"}`)
         .join("\n"),
-      "Still use browserNavigate / browserInspectPage. Use browser* for anything no WebMCP tool covers.",
+      "",
+      "EXECUTION FLOW:",
+      "1. Read the tool names above and match them to the user's task",
+      "2. Call the matching WebMCP tool directly (e.g., searchFlights for flight search, addToCart for adding items)",
+      "3. After the WebMCP tool returns, call browserInspectPage to verify the UI updated with results",
+      "4. Use browser* tools only for actions NOT covered by WebMCP (e.g., scrolling, reading text)",
+      "",
+      "❌ DO NOT use browserClick on search buttons or browserType in forms when a WebMCP tool exists for that action",
+      "✅ DO use the WebMCP tool first, then browserInspectPage to see results",
     );
   } else {
     lines.push(

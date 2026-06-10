@@ -1,22 +1,15 @@
 import React, { useEffect, useState } from "react";
 import {
   Globe,
-  Eye,
-  Camera,
   MousePointer2,
-  Wrench,
-  Shield,
   CheckCircle2,
   XCircle,
-  Brain,
-  MessageSquare,
   ChevronDown,
   Square,
   Circle,
   CircleDot,
   ListChecks,
 } from "lucide-react";
-import { BerrySprite } from "@common/components/BerrySprite";
 import { cn } from "@common/lib/utils";
 import { useAgentActivity } from "../contexts/AgentActivityContext";
 import { useChat } from "../contexts/ChatContext";
@@ -25,27 +18,33 @@ import type {
   AgentPlanState,
 } from "@shared/agent-activity-types";
 
-const kindMeta: Record<
-  AgentActivityKind,
-  { icon: React.ElementType; tone: string }
-> = {
-  idle: { icon: MessageSquare, tone: "text-muted-foreground" },
-  thinking: { icon: Brain, tone: "text-primary" },
-  navigating: { icon: Globe, tone: "text-primary" },
-  reading_page: { icon: Eye, tone: "text-primary" },
-  screenshot: { icon: Camera, tone: "text-primary" },
-  tool_consent: { icon: Shield, tone: "text-amber-600 dark:text-amber-400" },
-  tool_running: { icon: Wrench, tone: "text-primary" },
-  tool_done: {
-    icon: CheckCircle2,
-    tone: "text-emerald-600 dark:text-emerald-400",
-  },
-  tool_denied: { icon: XCircle, tone: "text-destructive" },
-  clicking: {
-    icon: MousePointer2,
-    tone: "text-violet-600 dark:text-violet-400",
-  },
-  responding: { icon: MessageSquare, tone: "text-muted-foreground" },
+/** Sprite frame IDs to use per activity kind. Frames 067/068/070 from the sprite sheet. */
+const kindSprite: Partial<Record<AgentActivityKind, string>> = {
+  navigating: "067",
+  reading_page: "067",
+  thinking: "070",
+  screenshot: "070",
+  tool_running: "068",
+  clicking: "068",
+  tool_consent: "070",
+  tool_done: "067",
+  tool_denied: "068",
+  responding: "067",
+};
+
+const ActivitySprite: React.FC<{ kind: AgentActivityKind }> = ({ kind }) => {
+  const frameId = kindSprite[kind];
+  if (!frameId) return null;
+  return (
+    <img
+      src={`/sprite/blueberry_sprites/blueberry_${frameId}.png`}
+      alt=""
+      width={14}
+      height={14}
+      className="shrink-0 object-contain"
+      draggable={false}
+    />
+  );
 };
 
 const formatUrl = (url: string | null): string => {
@@ -150,12 +149,7 @@ export const AgentStatusBar: React.FC = () => {
           aria-label="Agent status"
         >
           <div className="flex items-center gap-2 min-w-0">
-            <BerrySprite
-              kind={viewport.currentKind}
-              frame={viewport.spriteFrame}
-              size={20}
-              animated={active}
-            />
+            <ActivitySprite kind={viewport.currentKind} />
             <span
               className={cn(
                 "size-1.5 rounded-full shrink-0",
@@ -223,19 +217,15 @@ export const AgentStatusBar: React.FC = () => {
 
       {expanded && canExpand ? (
         <ul className="mt-1.5 max-h-[3.5rem] space-y-0.5 overflow-y-auto border-t border-border/40 pt-1 pl-7">
-          {history.slice(1).map((entry) => {
-            const meta = kindMeta[entry.kind] ?? kindMeta.thinking;
-            const Icon = meta.icon;
-            return (
-              <li
-                key={entry.id}
-                className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
-              >
-                <Icon className={cn("size-2.5 shrink-0", meta.tone)} />
-                <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-              </li>
-            );
-          })}
+          {history.slice(1).map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+            >
+              <ActivitySprite kind={entry.kind} />
+              <span className="min-w-0 flex-1 truncate">{entry.label}</span>
+            </li>
+          ))}
         </ul>
       ) : null}
     </div>

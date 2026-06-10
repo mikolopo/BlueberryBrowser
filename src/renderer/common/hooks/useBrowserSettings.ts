@@ -57,9 +57,11 @@ interface BrowserSettingsContextType {
   llmProvider: BrowserSettings["llmProvider"];
   llmModel: string;
   promptCacheEnabled: boolean;
+  screenPetEnabled: boolean;
   setLlmProvider: (provider: BrowserSettings["llmProvider"]) => void;
   setLlmModel: (model: string) => void;
   setPromptCacheEnabled: (enabled: boolean) => void;
+  setScreenPetEnabled: (enabled: boolean) => void;
 }
 
 const BrowserSettingsContext = createContext<BrowserSettingsContextType | null>(
@@ -126,6 +128,11 @@ export const BrowserSettingsProvider: React.FC<{
     [updateSettings],
   );
 
+  const setScreenPetEnabled = useCallback(
+    (enabled: boolean) => updateSettings({ screenPetEnabled: enabled }),
+    [updateSettings],
+  );
+
   return React.createElement(
     BrowserSettingsContext.Provider,
     {
@@ -136,9 +143,11 @@ export const BrowserSettingsProvider: React.FC<{
         llmProvider: settings.llmProvider,
         llmModel: settings.llmModel,
         promptCacheEnabled: settings.promptCacheEnabled,
+        screenPetEnabled: settings.screenPetEnabled,
         setLlmProvider,
         setLlmModel,
         setPromptCacheEnabled,
+        setScreenPetEnabled,
       },
     },
     children,

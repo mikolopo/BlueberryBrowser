@@ -21,6 +21,8 @@ export interface EmitAgentActivityInput {
   url?: string;
   toolName?: string;
   selector?: string;
+  /** Normalized (0–1) click position within the main browser window content area. */
+  clickTarget?: { x: number; y: number };
 }
 
 export class AgentActivityService {
@@ -30,6 +32,7 @@ export class AgentActivityService {
   private _feed: AgentActivityEvent[] = [];
   private _topBarWebContents: (() => WebContents | null) | null = null;
   private _sidebarWebContents: (() => WebContents | null) | null = null;
+  private _petWebContents: (() => WebContents | null) | null = null;
   private _idleTimer: NodeJS.Timeout | null = null;
   private _pageVisualHandler: ((event: AgentActivityEvent) => void) | null =
     null;
@@ -47,9 +50,11 @@ export class AgentActivityService {
   bindRenderers(
     getTopBar: () => WebContents | null,
     getSidebar: () => WebContents | null,
+    getPet?: () => WebContents | null,
   ): void {
     this._topBarWebContents = getTopBar;
     this._sidebarWebContents = getSidebar;
+    this._petWebContents = getPet ?? null;
   }
 
   setPageVisualHandler(handler: (event: AgentActivityEvent) => void): void {
@@ -235,6 +240,7 @@ export class AgentActivityService {
       ongoingTask: this.ongoingTaskSummary,
       ongoingTasks: [...this._ongoingTasks],
       plan: this._plan,
+      clickTarget: input.clickTarget,
     };
 
     if (input.kind === "idle" && this._ongoingTasks.length === 0) {
@@ -291,7 +297,7 @@ export class AgentActivityService {
       feed: this._feed.slice(0, 20),
     };
 
-    for (const getWc of [this._topBarWebContents, this._sidebarWebContents]) {
+    for (const getWc of [this._topBarWebContents, this._sidebarWebContents, this._petWebContents]) {
       const wc = getWc?.();
       if (wc && !wc.isDestroyed()) {
         wc.send("agent-activity-updated", payload);
@@ -306,7 +312,7 @@ export class AgentActivityService {
       feed: this._feed.slice(0, 20),
     };
 
-    for (const getWc of [this._topBarWebContents, this._sidebarWebContents]) {
+    for (const getWc of [this._topBarWebContents, this._sidebarWebContents, this._petWebContents]) {
       const wc = getWc?.();
       if (wc && !wc.isDestroyed()) {
         wc.send("agent-activity-updated", payload);

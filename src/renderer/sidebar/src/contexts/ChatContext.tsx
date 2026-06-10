@@ -54,24 +54,41 @@ export const useChat = () => {
   return context;
 };
 
+function stableId(role: string, content: string, index: number): string {
+  // Use a hash of role + first 80 chars of content for stability across re-renders.
+  // Fall back to index only for truly empty messages.
+  const sample = content.slice(0, 80).replace(/\s+/g, " ").trim();
+  if (!sample) return `msg-${index}`;
+  let h = 0;
+  for (let i = 0; i < sample.length; i++) {
+    h = Math.imul(31, h) + sample.charCodeAt(i);
+  }
+  return `${role}-${(h >>> 0).toString(36)}`;
+}
+
 function coreToMessages(raw: unknown[], markStreaming = false): Message[] {
-  return raw.map((msg, index) => {
-    const m = msg as { role: "user" | "assistant"; content: unknown };
-    const role = m.role;
-    return {
-      id: `msg-${index}-${Date.now()}`,
-      role,
-      content:
+  return raw
+    .filter((msg) => msg != null && typeof msg === "object")
+    .map((msg, index) => {
+      const m = msg as { role: "user" | "assistant"; content: unknown };
+      const role = m.role;
+      const content =
         typeof m.content === "string"
           ? m.content
           : (m.content as { type: string; text?: string }[])?.find(
               (p) => p.type === "text",
-            )?.text || "",
-      timestamp: Date.now(),
-      isStreaming:
-        markStreaming && index === raw.length - 1 && role === "assistant",
-    };
-  });
+            )?.text || "";
+      const isStreamingMsg =
+        markStreaming && index === raw.length - 1 && role === "assistant";
+      return {
+        // While streaming keep a fixed key so React doesn't remount on each token.
+        id: isStreamingMsg ? "streaming-assistant" : stableId(role, content, index),
+        role,
+        content,
+        timestamp: Date.now(),
+        isStreaming: isStreamingMsg,
+      };
+    });
 }
 
 function messagesToCore(
@@ -308,7 +325,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       streamingSessionIdRef.current = sessionId;
       markSessionLoading(sessionId);
 
+      // Instantly append user's message to local state
+      const userMsg: Message = {
+        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        role: "user",
+        content,
+        timestamp: Date.now(),
+      };
+      const updatedMessages = [...messages, userMsg];
+      setMessages(updatedMessages);
+
       try {
+        // Do NOT call syncMessagesToMain here — main already holds the correct
+        // history from the previous turn's broadcast. Calling setMessages with a
+        // stale renderer snapshot would wipe main's up-to-date history and cause
+        // duplicates or missing messages when the stream pushes updates back.
+
         const messageId = Date.now().toString();
         await window.sidebarAPI.sendChatMessage({
           message: content,
@@ -446,13 +478,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       streamingSessionIdRef.current = null;
 
       if (sid === activeSessionIdRef.current) {
-        setMessages((prev) =>
-          prev.map((m, i) =>
+        setMessages((prev) => {
+          const next = prev.map((m, i) =>
             i === prev.length - 1 && m.role === "assistant"
               ? { ...m, isStreaming: false }
               : m,
-          ),
-        );
+          );
+          persistSession(sid, next, true);
+          return next;
+        });
       }
     };
 
@@ -461,12 +495,53 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!targetId) return;
 
       const stillLoading = loadingSessionIdsRef.current.has(targetId);
-      const converted = coreToMessages(updatedMessages, stillLoading);
-
-      persistSession(targetId, converted);
 
       if (targetId === activeSessionIdRef.current) {
-        setMessages(converted);
+        setMessages((prev) => {
+          // Build a stable-ID lookup from existing messages (keyed by role+content).
+          // This ensures React doesn't remount messages when they get re-hashed on
+          // every streaming token update.
+          const idMap = new Map<string, string>();
+          for (const m of prev) {
+            if (!m.isStreaming) {
+              idMap.set(`${m.role}::${m.content}`, m.id);
+            }
+          }
+
+          // Filter out undefined/null messages before processing
+          const validMessages = updatedMessages.filter(
+            (msg) => msg != null && typeof msg === "object"
+          );
+
+          const converted: Message[] = validMessages.map((msg, index) => {
+            const role = (msg as any).role as "user" | "assistant";
+            const content =
+              typeof (msg as any).content === "string"
+                ? (msg as any).content
+                : ((msg as any).content as { type: string; text?: string }[])?.find(
+                    (p) => p.type === "text",
+                  )?.text || "";
+            const isStreamingMsg =
+              stillLoading && index === validMessages.length - 1 && role === "assistant";
+            const mapKey = `${role}::${content}`;
+            const existingId = idMap.get(mapKey);
+            return {
+              id: isStreamingMsg
+                ? "streaming-assistant"
+                : (existingId ?? stableId(role, content, index)),
+              role,
+              content,
+              timestamp: Date.now(),
+              isStreaming: isStreamingMsg,
+            };
+          });
+
+          persistSession(targetId, converted);
+          return converted;
+        });
+      } else {
+        const converted = coreToMessages(updatedMessages, stillLoading);
+        persistSession(targetId, converted);
       }
     };
 
