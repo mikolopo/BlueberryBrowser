@@ -20,6 +20,7 @@ export interface TabOptions {
   onMetadataChanged?: (tab: Tab) => void;
   getIsDarkMode?: () => boolean;
   getForcePageDarkMode?: () => boolean;
+  onManualActionRecorded?: (action: any) => void;
 }
 
 export class Tab {
@@ -63,7 +64,7 @@ export class Tab {
     });
 
     this.webContentsView.setBackgroundColor(initialBg);
-    this.setupEventListeners(options.onDidFinishLoad);
+    this.setupEventListeners(options);
     void this.loadURL(url);
   }
 
@@ -83,8 +84,9 @@ export class Tab {
     });
   }
 
-  private setupEventListeners(onDidFinishLoad?: (tab: Tab) => void): void {
+  private setupEventListeners(options: TabOptions): void {
     const webContents = this.webContentsView.webContents;
+    const onDidFinishLoad = options.onDidFinishLoad;
 
     const notifyMetadata = (): void => {
       if (!this._onMetadataChanged) return;
@@ -103,11 +105,17 @@ export class Tab {
     webContents.on("did-navigate", (_, url) => {
       this._url = url;
       notifyMetadata();
+      if (options.onManualActionRecorded) {
+        options.onManualActionRecorded({ type: "navigate", url, tabId: this._id });
+      }
     });
 
     webContents.on("did-navigate-in-page", (_, url) => {
       this._url = url;
       notifyMetadata();
+      if (options.onManualActionRecorded) {
+        options.onManualActionRecorded({ type: "navigate", url, tabId: this._id });
+      }
     });
 
     if (onDidFinishLoad) {
@@ -116,12 +124,68 @@ export class Tab {
       });
     }
 
+    const injectRecorder = () => {
+      const script = `
+        (() => {
+          if (window.__berry_recorder_injected__) return;
+          window.__berry_recorder_injected__ = true;
+
+          document.addEventListener("click", (e) => {
+            const el = e.target;
+            if (!el) return;
+            let selector = el.tagName.toLowerCase();
+            if (el.id) {
+              selector += "#" + el.id;
+            } else if (el.className && typeof el.className === "string") {
+              const firstClass = el.className.split(" ")[0];
+              if (firstClass && !firstClass.includes("berry") && !firstClass.includes("darkreader")) {
+                selector += "." + firstClass;
+              }
+            }
+            console.log("BERRY_MANUAL_ACTION:" + JSON.stringify({
+              type: "click",
+              selector: selector
+            }));
+          }, true);
+
+          document.addEventListener("change", (e) => {
+            const el = e.target;
+            if (!el || (el.tagName !== "INPUT" && el.tagName !== "TEXTAREA")) return;
+            let selector = el.tagName.toLowerCase();
+            if (el.id) {
+              selector += "#" + el.id;
+            }
+            console.log("BERRY_MANUAL_ACTION:" + JSON.stringify({
+              type: "type",
+              selector: selector,
+              text: el.value
+            }));
+          }, true);
+        })()
+      `;
+      webContents.executeJavaScript(script).catch(() => {});
+    };
+
     webContents.on("dom-ready", () => {
       this.schedulePageThemeSync();
+      injectRecorder();
     });
 
     webContents.on("did-finish-load", () => {
       this.schedulePageThemeSync();
+      injectRecorder();
+    });
+
+    webContents.on("console-message", (_event, _level, message) => {
+      if (message.startsWith("BERRY_MANUAL_ACTION:")) {
+        try {
+          const action = JSON.parse(message.substring(20));
+          action.tabId = this._id;
+          if (options.onManualActionRecorded) {
+            options.onManualActionRecorded(action);
+          }
+        } catch (err) {}
+      }
     });
   }
 

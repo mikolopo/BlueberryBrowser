@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus } from "lucide-react";
+import { Plus, Terminal } from "lucide-react";
 import { cn } from "@common/lib/utils";
 import { ChatHistoryIcon } from "./icons/ChatHistoryIcon";
 import { SettingsSlidersIcon } from "./icons/SettingsSlidersIcon";
@@ -9,8 +9,10 @@ interface ChatHeaderProps {
   onNewChat: () => void;
   onOpenHistory: () => void;
   onOpenSettings: () => void;
+  onOpenScripts: () => void;
   historyOpen: boolean;
   settingsOpen: boolean;
+  scriptsOpen: boolean;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -18,8 +20,10 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onNewChat,
   onOpenHistory,
   onOpenSettings,
+  onOpenScripts,
   historyOpen,
   settingsOpen,
+  scriptsOpen,
 }) => (
   <header
     className={cn(
@@ -41,6 +45,22 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       aria-expanded={historyOpen}
     >
       <ChatHistoryIcon className="size-[18px]" />
+    </button>
+
+    <button
+      type="button"
+      onClick={onOpenScripts}
+      className={cn(
+        "flex items-center justify-center size-8 rounded-lg transition-colors",
+        scriptsOpen
+          ? "bg-muted text-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+      title="Saved scripts"
+      aria-label="Saved scripts"
+      aria-expanded={scriptsOpen}
+    >
+      <Terminal className="size-[17px]" />
     </button>
 
     <button

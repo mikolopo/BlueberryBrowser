@@ -16,6 +16,17 @@ import type { Window } from "./Window";
 import type { AgentActivityService } from "./agent/AgentActivityService";
 import type { BrowserSettings } from "../shared/browser-settings-types";
 import {
+  execBrowserNavigate,
+  execBrowserSearch,
+  execBrowserClick,
+  execBrowserType,
+  execBrowserScroll,
+  execBrowserTabCreate,
+  execBrowserTabSwitch,
+  execBrowserTabClose,
+  type BrowserActionContext,
+} from "./navigation/browserActionExecutors";
+import {
   getDefaultModelForProvider,
   getLlmProviderConfig,
   type LlmProvider,
@@ -412,6 +423,10 @@ export class LLMClient {
 
   getMessages(): CoreMessage[] {
     return this.messages;
+  }
+
+  getRecordedActions(): any[] {
+    return this.recordedActions;
   }
 
   private sendMessagesToRenderer(): void {
@@ -852,30 +867,55 @@ export class LLMClient {
   private generateDendritePython(actions: any[]): string {
     if (actions.length === 0) return "# No actions recorded.";
     let code = `import asyncio\nfrom dendrite import Dendrite\n\nasync def main():\n    # Initialize Dendrite browser automation client\n    client = Dendrite()\n    \n`;
+    const tabMap = new Map<string, string>();
+    let tabCount = 0;
+    const getTabVar = (tabId?: string) => {
+      if (!tabId) return "client";
+      if (!tabMap.has(tabId)) {
+        tabMap.set(tabId, `tab_${tabCount++}`);
+      }
+      return tabMap.get(tabId)!;
+    };
+    code += `    tab_0 = client.tabs[0]\n\n`;
+    tabMap.set(actions[0]?.tabId || "default", "tab_0");
+
     for (const action of actions) {
+      const activeTabVar = getTabVar(action.tabId || "default");
       switch (action.type) {
         case "navigate":
-          code += `    # Navigate to target page\n    await client.goto("${action.url}")\n\n`;
+          code += `    # Navigate to target page\n    await ${activeTabVar}.goto("${action.url}")\n\n`;
           break;
         case "search":
-          code += `    # Search via search engine\n    await client.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}")\n\n`;
+          code += `    # Search via search engine\n    await ${activeTabVar}.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}")\n\n`;
           break;
         case "click":
           const selClickEscaped = (action.selector || "").replace(/"/g, '\\"');
-          code += `    # Click on the element\n    await client.click("${selClickEscaped}")\n\n`;
+          code += `    # Click on the element\n    await ${activeTabVar}.click("${selClickEscaped}")\n\n`;
           break;
         case "type":
           const selTypeEscaped = (action.selector || "").replace(/"/g, '\\"');
           const textEscaped = (action.text || "").replace(/"/g, '\\"');
-          code += `    # Type text into the input field\n    await client.fill("${selTypeEscaped}", "${textEscaped}")\n`;
+          code += `    # Type text into the input field\n    await ${activeTabVar}.fill("${selTypeEscaped}", "${textEscaped}")\n`;
           if (action.pressEnter) {
-            code += `    await client.press("${selTypeEscaped}", "Enter")\n`;
+            code += `    await ${activeTabVar}.press("${selTypeEscaped}", "Enter")\n`;
           }
           code += `\n`;
           break;
         case "scroll":
           const selScrollEscaped = (action.selector || "body").replace(/"/g, '\\"');
-          code += `    # Scroll target area\n    await client.scroll("${selScrollEscaped}")\n\n`;
+          code += `    # Scroll target area\n    await ${activeTabVar}.scroll("${selScrollEscaped}")\n\n`;
+          break;
+        case "tabCreate":
+          const newTabVar = getTabVar(action.tabId);
+          code += `    # Create a new tab\n    ${newTabVar} = await client.create_tab("${action.url || ""}")\n\n`;
+          break;
+        case "tabSwitch":
+          const switchTabVar = getTabVar(action.tabId);
+          code += `    # Switch active tab\n    await ${switchTabVar}.focus()\n\n`;
+          break;
+        case "tabClose":
+          const closeTabVar = getTabVar(action.tabId);
+          code += `    # Close the tab\n    await ${closeTabVar}.close()\n\n`;
           break;
       }
     }
@@ -886,35 +926,152 @@ export class LLMClient {
   private generateDendriteTypeScript(actions: any[]): string {
     if (actions.length === 0) return "// No actions recorded.";
     let code = `import { Dendrite } from "dendrite-sdk";\n\nasync function main() {\n  // Initialize Dendrite browser automation client\n  const client = new Dendrite();\n  \n`;
+    const tabMap = new Map<string, string>();
+    let tabCount = 0;
+    const getTabVar = (tabId?: string) => {
+      if (!tabId) return "client";
+      if (!tabMap.has(tabId)) {
+        tabMap.set(tabId, `tab_${tabCount++}`);
+      }
+      return tabMap.get(tabId)!;
+    };
+    code += `  const tab_0 = client.tabs[0];\n\n`;
+    tabMap.set(actions[0]?.tabId || "default", "tab_0");
+
     for (const action of actions) {
+      const activeTabVar = getTabVar(action.tabId || "default");
       switch (action.type) {
         case "navigate":
-          code += `  // Navigate to target page\n  await client.goto("${action.url}");\n\n`;
+          code += `  // Navigate to target page\n  await ${activeTabVar}.goto("${action.url}");\n\n`;
           break;
         case "search":
-          code += `  // Search via search engine\n  await client.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}");\n\n`;
+          code += `  // Search via search engine\n  await ${activeTabVar}.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}");\n\n`;
           break;
         case "click":
           const selClickEscaped = (action.selector || "").replace(/"/g, '\\"');
-          code += `  // Click on the element\n  await client.click("${selClickEscaped}");\n\n`;
+          code += `  // Click on the element\n  await ${activeTabVar}.click("${selClickEscaped}");\n\n`;
           break;
         case "type":
           const selTypeEscaped = (action.selector || "").replace(/"/g, '\\"');
           const textEscaped = (action.text || "").replace(/"/g, '\\"');
-          code += `  // Type text into the input field\n  await client.fill("${selTypeEscaped}", "${textEscaped}");\n`;
+          code += `  // Type text into the input field\n  await ${activeTabVar}.fill("${selTypeEscaped}", "${textEscaped}");\n`;
           if (action.pressEnter) {
-            code += `  await client.press("${selTypeEscaped}", "Enter");\n`;
+            code += `  await ${activeTabVar}.press("${selTypeEscaped}", "Enter");\n`;
           }
           code += `\n`;
           break;
         case "scroll":
           const selScrollEscaped = (action.selector || "body").replace(/"/g, '\\"');
-          code += `  // Scroll target area\n  await client.scroll("${selScrollEscaped}");\n\n`;
+          code += `  // Scroll target area\n  await ${activeTabVar}.scroll("${selScrollEscaped}");\n\n`;
+          break;
+        case "tabCreate":
+          const newTabVar = getTabVar(action.tabId);
+          code += `  // Create a new tab\n  const ${newTabVar} = await client.create_tab("${action.url || ""}");\n\n`;
+          break;
+        case "tabSwitch":
+          const switchTabVar = getTabVar(action.tabId);
+          code += `  // Switch active tab\n  await ${switchTabVar}.focus();\n\n`;
+          break;
+        case "tabClose":
+          const closeTabVar = getTabVar(action.tabId);
+          code += `  // Close the tab\n  await ${closeTabVar}.close();\n\n`;
           break;
       }
     }
     code += `}\n\nmain().catch(console.error);\n`;
     return code;
+  }
+
+  recordManualAction(action: any): void {
+    const last = this.recordedActions[this.recordedActions.length - 1];
+    if (
+      last &&
+      last.type === action.type &&
+      last.url === action.url &&
+      last.selector === action.selector &&
+      last.tabId === action.tabId
+    ) {
+      return;
+    }
+    this.recordedActions.push(action);
+    this.webContents.send("actions-recorded-updated", this.recordedActions);
+  }
+
+  async runAutomationActions(actions: any[]): Promise<boolean> {
+    if (!this.window) return false;
+    this.runCancelled = false;
+
+    this.agentActivity?.emit({
+      kind: "thinking",
+      label: "Running automation replay...",
+      tabId: this.window.activeTab?.id,
+      url: this.window.activeTab?.url ?? undefined,
+    });
+
+    try {
+      for (const action of actions) {
+        if (this.runCancelled) break;
+
+        const ctx: BrowserActionContext = {
+          window: this.window,
+          agentActivity: this.agentActivity,
+          maxPageTextLength: MAX_PAGE_TEXT_LENGTH,
+          isCancelled: () => this.runCancelled,
+        };
+
+        this.agentActivity?.emit({
+          kind: "tool_running",
+          label: `Executing ${action.type}...`,
+          tabId: this.window.activeTab?.id,
+          url: this.window.activeTab?.url ?? undefined,
+        });
+
+        switch (action.type) {
+          case "navigate":
+            await execBrowserNavigate(ctx, action.url);
+            break;
+          case "search":
+            await execBrowserSearch(ctx, action.query);
+            break;
+          case "click":
+            await execBrowserClick(ctx, action.selector);
+            break;
+          case "type":
+            await execBrowserType(ctx, action.selector, action.text || "", action.pressEnter);
+            break;
+          case "scroll":
+            await execBrowserScroll(ctx, action.selector || "body");
+            break;
+          case "tabCreate":
+            await execBrowserTabCreate(ctx, action.url);
+            break;
+          case "tabSwitch":
+            await execBrowserTabSwitch(ctx, action.tabId);
+            break;
+          case "tabClose":
+            await execBrowserTabClose(ctx, action.tabId);
+            break;
+        }
+        await sleep(600);
+      }
+
+      this.agentActivity?.emit({
+        kind: "idle",
+        label: "Automation replay completed successfully",
+        tabId: this.window.activeTab?.id,
+        url: this.window.activeTab?.url ?? undefined,
+      });
+      return true;
+    } catch (err) {
+      console.error("Replay failure:", err);
+      this.agentActivity?.emit({
+        kind: "idle",
+        label: `Replay failed: ${String(err)}`,
+        tabId: this.window.activeTab?.id,
+        url: this.window.activeTab?.url ?? undefined,
+      });
+      return false;
+    }
   }
 
   private async processStream(

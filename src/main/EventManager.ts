@@ -247,6 +247,14 @@ export class EventManager {
       return this.mainWindow.sidebar.client.getMessages();
     });
 
+    ipcMain.handle("sidebar-run-actions", async (_, actions: any[]) => {
+      return await this.mainWindow.sidebar.client.runAutomationActions(actions);
+    });
+
+    ipcMain.handle("sidebar-get-recorded-actions", () => {
+      return this.mainWindow.sidebar.client.getRecordedActions();
+    });
+
     ipcMain.handle("sidebar-resize", (_, width: number) => {
       this.mainWindow.resizeSidebar(width);
       return true;

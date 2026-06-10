@@ -64,6 +64,9 @@ const StreamingContent: React.FC<{ content: string }> = ({ content }) => (
 const DendriteCodeRenderer: React.FC<{ jsonContent: string }> = ({ jsonContent }) => {
   const [activeTab, setActiveTab] = useState<"python" | "typescript">("python");
   const [copied, setCopied] = useState(false);
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [scriptName, setScriptName] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
 
   let data = { python: "", typescript: "" };
   try {
@@ -79,6 +82,40 @@ const DendriteCodeRenderer: React.FC<{ jsonContent: string }> = ({ jsonContent }
     navigator.clipboard.writeText(codeToDisplay);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = () => {
+    if (!scriptName.trim()) return;
+    try {
+      const savedRaw = localStorage.getItem("saved_dendrite_scripts");
+      const savedList = savedRaw ? JSON.parse(savedRaw) : [];
+      
+      window.sidebarAPI.getRecordedActions().then((actions) => {
+        const newScript = {
+          id: Date.now().toString(),
+          name: scriptName.trim(),
+          actions: actions.length > 0 ? actions : [
+            { type: "navigate", url: "https://www.wikipedia.org" }
+          ],
+          python: data.python,
+          typescript: data.typescript,
+          timestamp: Date.now()
+        };
+        savedList.push(newScript);
+        localStorage.setItem("saved_dendrite_scripts", JSON.stringify(savedList));
+        
+        window.dispatchEvent(new Event("saved-scripts-updated"));
+        
+        setSaveStatus("saved");
+        setTimeout(() => {
+          setShowSaveInput(false);
+          setScriptName("");
+          setSaveStatus("idle");
+        }, 1500);
+      });
+    } catch (e) {
+      console.error("Failed to save script:", e);
+    }
   };
 
   return (
@@ -108,22 +145,55 @@ const DendriteCodeRenderer: React.FC<{ jsonContent: string }> = ({ jsonContent }
             TypeScript SDK
           </button>
         </div>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
-        >
-          {copied ? (
-            <span className="text-emerald-500 font-semibold animate-pulse">Copied!</span>
-          ) : (
-            <>
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-              </svg>
-              <span>Copy</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setShowSaveInput(!showSaveInput)}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>Save to Library</span>
+          </button>
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
+          >
+            {copied ? (
+              <span className="text-emerald-500 font-semibold animate-pulse">Copied!</span>
+            ) : (
+              <>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
+
+      {showSaveInput && (
+        <div className="flex gap-2 p-3 bg-muted/30 border-b border-border/40 dark:border-border/10 items-center">
+          <input
+            type="text"
+            placeholder="Enter script name..."
+            value={scriptName}
+            onChange={(e) => setScriptName(e.target.value)}
+            className="flex-1 px-3 py-1.5 text-xs bg-background/85 border border-border/80 rounded-md focus:outline-none focus:border-primary text-foreground"
+            disabled={saveStatus === "saved"}
+          />
+          <button
+            onClick={handleSave}
+            disabled={!scriptName.trim() || saveStatus === "saved"}
+            className="px-3 py-1.5 text-xs bg-primary text-primary-foreground font-semibold rounded-md shadow-sm disabled:opacity-55"
+          >
+            {saveStatus === "saved" ? "Saved!" : "Save"}
+          </button>
+        </div>
+      )}
+
       <pre className="p-4 text-xs font-mono overflow-x-auto bg-muted/30 dark:bg-black/10 text-foreground leading-relaxed select-text m-0 whitespace-pre">
         <code>{codeToDisplay}</code>
       </pre>

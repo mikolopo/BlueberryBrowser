@@ -7,6 +7,7 @@ import { Chat } from "./components/Chat";
 import { ChatHeader } from "./components/ChatHeader";
 import { ChatSettingsPanel } from "./components/ChatSettingsPanel";
 import { ChatHistoryPanel } from "./components/ChatHistoryPanel";
+import { SavedScriptsPanel } from "./components/SavedScriptsPanel";
 import { WebMcpTools } from "./components/WebMcpTools";
 import { AgentStatusBar } from "./components/AgentStatusBar";
 import { WebMcpConsentModal } from "./components/WebMcpConsentModal";
@@ -25,6 +26,7 @@ const ChatShell: React.FC = () => {
   } = useChat();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [scriptsOpen, setScriptsOpen] = useState(false);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -33,14 +35,22 @@ const ChatShell: React.FC = () => {
         onNewChat={() => void startNewChat()}
         onOpenHistory={() => {
           setSettingsOpen(false);
+          setScriptsOpen(false);
           setHistoryOpen((v) => !v);
         }}
         onOpenSettings={() => {
           setHistoryOpen(false);
+          setScriptsOpen(false);
           setSettingsOpen((v) => !v);
+        }}
+        onOpenScripts={() => {
+          setHistoryOpen(false);
+          setSettingsOpen(false);
+          setScriptsOpen((v) => !v);
         }}
         historyOpen={historyOpen}
         settingsOpen={settingsOpen}
+        scriptsOpen={scriptsOpen}
       />
 
       <ChatHistoryPanel
@@ -59,6 +69,11 @@ const ChatShell: React.FC = () => {
       <ChatSettingsPanel
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      <SavedScriptsPanel
+        open={scriptsOpen}
+        onClose={() => setScriptsOpen(false)}
       />
     </div>
   );

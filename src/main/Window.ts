@@ -166,6 +166,9 @@ export class Window {
       },
       getIsDarkMode: () => this._isDarkMode,
       getForcePageDarkMode: () => this._browserSettings.forcePageDarkMode,
+      onManualActionRecorded: (action) => {
+        this._sideBar.client.recordManualAction(action);
+      },
     });
 
     tab.setBackgroundColor(getTheme(this._isDarkMode).contentBg);

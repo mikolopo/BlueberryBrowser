@@ -116,6 +116,10 @@ interface SidebarAPI {
   ) => void;
   removeAgentActivityListener: () => void;
   resizeSidebar: (width: number) => Promise<boolean>;
+  runActions: (actions: any[]) => Promise<boolean>;
+  getRecordedActions: () => Promise<any[]>;
+  onActionsRecordedUpdated: (callback: (actions: any[]) => void) => void;
+  removeActionsRecordedUpdatedListener: () => void;
 }
 
 declare global {

@@ -123,6 +123,15 @@ const sidebarAPI = {
   },
 
   resizeSidebar: (width: number) => ipcRenderer.invoke("sidebar-resize", width),
+
+  runActions: (actions: any[]) => ipcRenderer.invoke("sidebar-run-actions", actions),
+  getRecordedActions: () => ipcRenderer.invoke("sidebar-get-recorded-actions"),
+  onActionsRecordedUpdated: (callback: (actions: any[]) => void) => {
+    ipcRenderer.on("actions-recorded-updated", (_, actions) => callback(actions));
+  },
+  removeActionsRecordedUpdatedListener: () => {
+    ipcRenderer.removeAllListeners("actions-recorded-updated");
+  },
 };
 
 if (process.contextIsolated) {
