@@ -115,6 +115,7 @@ interface SidebarAPI {
     callback: (payload: AgentActivityPayload) => void,
   ) => void;
   removeAgentActivityListener: () => void;
+  resizeSidebar: (width: number) => Promise<boolean>;
 }
 
 declare global {

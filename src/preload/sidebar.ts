@@ -121,6 +121,8 @@ const sidebarAPI = {
   removeAgentActivityListener: () => {
     ipcRenderer.removeAllListeners("agent-activity-updated");
   },
+
+  resizeSidebar: (width: number) => ipcRenderer.invoke("sidebar-resize", width),
 };
 
 if (process.contextIsolated) {

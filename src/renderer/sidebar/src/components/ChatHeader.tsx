@@ -46,11 +46,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     <button
       type="button"
       onClick={onNewChat}
-      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
       title="New chat"
     >
       <Plus className="size-3.5" />
-      <span className="hidden sm:inline">New</span>
+      <span className="hidden xs:inline">New</span>
     </button>
 
     <div className="flex-1 min-w-0 px-1">

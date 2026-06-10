@@ -8,7 +8,16 @@ export const TOPBAR_MAIN_HEIGHT = 48;
 export const TOPBAR_HEIGHT = TOPBAR_MAIN_HEIGHT;
 /** Extra height for the top bar WebContentsView when the settings dropdown is open. */
 export const TOPBAR_SETTINGS_PANEL_HEIGHT = 320;
-export const AI_SIDEBAR_WIDTH = 400;
+
+let currentSidebarWidth = 400;
+
+export const getSidebarWidth = (): number => currentSidebarWidth;
+export const setSidebarWidth = (width: number): void => {
+  currentSidebarWidth = Math.max(280, Math.min(800, width));
+};
+
+export const AI_SIDEBAR_WIDTH = 400; // Left for compile compatibility but we use getSidebarWidth() dynamically
+
 /** Inset so content does not bleed past the window edge when a panel is hidden. */
 export const CONTENT_EDGE_INSET = 8;
 
@@ -40,7 +49,7 @@ export const getContentWidth = (
 ): number =>
   windowWidth -
   getContentLeftOffset(tabStripExpanded) -
-  (aiSidebarVisible ? AI_SIDEBAR_WIDTH : 0) -
+  (aiSidebarVisible ? getSidebarWidth() : 0) -
   (aiSidebarVisible ? 0 : CONTENT_EDGE_INSET);
 
 export const getContentHeight = (contentHeight: number): number =>

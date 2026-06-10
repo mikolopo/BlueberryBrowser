@@ -10,6 +10,7 @@ import {
   getContentOrigin,
   getWindowContentSize,
   TOPBAR_HEIGHT,
+  getSidebarWidth,
 } from "./windowLayout";
 
 export class SideBar {
@@ -60,10 +61,11 @@ export class SideBar {
 
     const { width, height } = getWindowContentSize(this.baseWindow);
     const origin = getContentOrigin();
+    const sidebarWidth = getSidebarWidth();
     this.webContentsView.setBounds({
-      x: width - AI_SIDEBAR_WIDTH,
+      x: width - sidebarWidth,
       y: origin.y,
-      width: AI_SIDEBAR_WIDTH,
+      width: sidebarWidth,
       height: getContentHeight(height),
     });
   }

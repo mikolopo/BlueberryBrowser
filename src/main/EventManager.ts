@@ -246,6 +246,11 @@ export class EventManager {
     ipcMain.handle("sidebar-get-messages", () => {
       return this.mainWindow.sidebar.client.getMessages();
     });
+
+    ipcMain.handle("sidebar-resize", (_, width: number) => {
+      this.mainWindow.resizeSidebar(width);
+      return true;
+    });
   }
 
   private handlePageContentEvents(): void {

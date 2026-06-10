@@ -19,6 +19,7 @@ import {
   getWindowContentSize,
   TAB_STRIP_WIDTH,
   TOPBAR_HEIGHT,
+  setSidebarWidth,
 } from "./windowLayout";
 
 const getInitialWindowBounds = (): {
@@ -464,6 +465,11 @@ export class Window {
     this.updateAllBounds();
     this.broadcastSidebarVisibility(visible);
     return visible;
+  }
+
+  resizeSidebar(width: number): void {
+    setSidebarWidth(width);
+    this.updateAllBounds();
   }
 
   private broadcastSidebarVisibility(isVisible: boolean): void {
