@@ -132,6 +132,16 @@ const sidebarAPI = {
   removeActionsRecordedUpdatedListener: () => {
     ipcRenderer.removeAllListeners("actions-recorded-updated");
   },
+
+  startRecording: () => ipcRenderer.invoke("sidebar-start-recording"),
+  stopRecording: () => ipcRenderer.invoke("sidebar-stop-recording"),
+  isRecordingActive: () => ipcRenderer.invoke("sidebar-is-recording-active"),
+  onRecordingStateChanged: (callback: (active: boolean) => void) => {
+    ipcRenderer.on("recording-state-changed", (_, active) => callback(active));
+  },
+  removeRecordingStateChangedListener: () => {
+    ipcRenderer.removeAllListeners("recording-state-changed");
+  },
 };
 
 if (process.contextIsolated) {

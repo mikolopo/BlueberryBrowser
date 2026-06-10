@@ -120,6 +120,11 @@ interface SidebarAPI {
   getRecordedActions: () => Promise<any[]>;
   onActionsRecordedUpdated: (callback: (actions: any[]) => void) => void;
   removeActionsRecordedUpdatedListener: () => void;
+  startRecording: () => Promise<boolean>;
+  stopRecording: () => Promise<{ python: string; typescript: string; actions: any[] }>;
+  isRecordingActive: () => Promise<boolean>;
+  onRecordingStateChanged: (callback: (active: boolean) => void) => void;
+  removeRecordingStateChangedListener: () => void;
 }
 
 declare global {

@@ -255,6 +255,19 @@ export class EventManager {
       return this.mainWindow.sidebar.client.getRecordedActions();
     });
 
+    ipcMain.handle("sidebar-start-recording", () => {
+      this.mainWindow.sidebar.client.startRecording();
+      return true;
+    });
+
+    ipcMain.handle("sidebar-stop-recording", () => {
+      return this.mainWindow.sidebar.client.stopRecording();
+    });
+
+    ipcMain.handle("sidebar-is-recording-active", () => {
+      return this.mainWindow.sidebar.client.isRecordingActive();
+    });
+
     ipcMain.handle("sidebar-resize", (_, width: number) => {
       this.mainWindow.resizeSidebar(width);
       return true;

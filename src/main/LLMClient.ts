@@ -100,6 +100,7 @@ export class LLMClient {
   private currentAccumulatedText = "";
   private currentStatusLine = "";
   private recordedActions: any[] = [];
+  private isRecording = false;
 
   constructor(webContents: WebContents, initialSettings: BrowserSettings) {
     this.webContents = webContents;
@@ -429,6 +430,29 @@ export class LLMClient {
     return this.recordedActions;
   }
 
+  startRecording(): void {
+    this.recordedActions = [];
+    this.isRecording = true;
+    this.webContents.send("recording-state-changed", true);
+    this.webContents.send("actions-recorded-updated", this.recordedActions);
+  }
+
+  stopRecording(): { python: string; typescript: string; actions: any[] } {
+    this.isRecording = false;
+    this.webContents.send("recording-state-changed", false);
+    const python = this.generateDendritePython(this.recordedActions);
+    const typescript = this.generateDendriteTypeScript(this.recordedActions);
+    return {
+      python,
+      typescript,
+      actions: [...this.recordedActions]
+    };
+  }
+
+  isRecordingActive(): boolean {
+    return this.isRecording;
+  }
+
   private sendMessagesToRenderer(): void {
     this.webContents.send("chat-messages-updated", this.messages);
   }
@@ -516,7 +540,10 @@ export class LLMClient {
       ongoingTasks: this.window?.ongoingTaskService ?? null,
       pageWebMcpTools,
       onActionRecorded: (action) => {
-        this.recordedActions.push(action);
+        if (this.isRecording) {
+          this.recordedActions.push(action);
+          this.webContents.send("actions-recorded-updated", this.recordedActions);
+        }
       },
     });
   }
@@ -983,6 +1010,7 @@ export class LLMClient {
   }
 
   recordManualAction(action: any): void {
+    if (!this.isRecording) return;
     const last = this.recordedActions[this.recordedActions.length - 1];
     if (
       last &&
