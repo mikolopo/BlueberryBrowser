@@ -36,6 +36,15 @@ import {
   withActionTimeout,
 } from "./actionTimeout";
 
+export interface RecordedAction {
+  type: "navigate" | "search" | "click" | "type" | "scroll";
+  url?: string;
+  query?: string;
+  selector?: string;
+  text?: string;
+  pressEnter?: boolean;
+}
+
 export interface BrowserActionContext {
   window: Window | null;
   agentActivity: AgentActivityService | null;
@@ -43,6 +52,8 @@ export interface BrowserActionContext {
   isCancelled?: () => boolean;
   /** When false, never steal focus from sidebar (background tasks). Default: respect sidebar focus. */
   focusForInteraction?: boolean;
+  /** Callback to log a runtime action for automation code generator */
+  onActionRecorded?: (action: RecordedAction) => void;
 }
 
 function throwIfCancelled(ctx: BrowserActionContext): void {
@@ -160,6 +171,11 @@ export async function execBrowserNavigate(
     console.log(
       `[BrowserAction:Navigate] SUCCESS. Loaded: "${target}" (Title: "${read.pageSignals.pageTitle}")`,
     );
+
+    if (ctx.onActionRecorded) {
+      ctx.onActionRecorded({ type: "navigate", url: target });
+    }
+
     return {
       ok: true,
       navigatedTo: target,
@@ -219,6 +235,11 @@ export async function execBrowserSearch(
     console.log(
       `[BrowserAction:Search] SUCCESS. Found ${results.length} results.`,
     );
+
+    if (ctx.onActionRecorded) {
+      ctx.onActionRecorded({ type: "search", query: q });
+    }
+
     return {
       ok: true,
       searchQuery: q,
@@ -293,6 +314,11 @@ export async function execBrowserClick(
     if (!result?.ok) throw new Error(result?.error ?? "Click failed");
     await sleep(450);
     console.log(`[BrowserAction:Click] SUCCESS for selector: "${selector}"`);
+
+    if (ctx.onActionRecorded) {
+      ctx.onActionRecorded({ type: "click", selector });
+    }
+
     return result;
   });
 }
@@ -325,6 +351,11 @@ export async function execBrowserType(
     );
     if (!result?.ok) throw new Error(result?.error ?? "Type failed");
     console.log(`[BrowserAction:Type] SUCCESS for selector: "${selector}"`);
+
+    if (ctx.onActionRecorded) {
+      ctx.onActionRecorded({ type: "type", selector, text, pressEnter });
+    }
+
     return result;
   });
 }

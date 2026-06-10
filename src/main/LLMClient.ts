@@ -88,6 +88,7 @@ export class LLMClient {
   private activeAssistantMessageIndex: number | null = null;
   private currentAccumulatedText = "";
   private currentStatusLine = "";
+  private recordedActions: any[] = [];
 
   constructor(webContents: WebContents, initialSettings: BrowserSettings) {
     this.webContents = webContents;
@@ -279,6 +280,7 @@ export class LLMClient {
     this.activeAssistantMessageIndex = null;
     this.currentAccumulatedText = "";
     this.currentStatusLine = "";
+    this.recordedActions = [];
 
     try {
       this.webMcpEnabledForRequest =
@@ -498,6 +500,9 @@ export class LLMClient {
       isCancelled: () => this.runCancelled,
       ongoingTasks: this.window?.ongoingTaskService ?? null,
       pageWebMcpTools,
+      onActionRecorded: (action) => {
+        this.recordedActions.push(action);
+      },
     });
   }
 

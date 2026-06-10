@@ -201,6 +201,7 @@ export interface StaticToolRuntime {
   isCancelled?: () => boolean;
   ongoingTasks: OngoingTaskService | null;
   pageWebMcpTools?: WebMcpToolDescriptor[];
+  onActionRecorded?: (action: any) => void;
 }
 
 export const buildStaticToolSet = (runtime: StaticToolRuntime): ToolSet => {
@@ -211,6 +212,7 @@ export const buildStaticToolSet = (runtime: StaticToolRuntime): ToolSet => {
     agentActivity: runtime.agentActivity,
     maxPageTextLength: runtime.maxPageTextLength,
     isCancelled: runtime.isCancelled,
+    onActionRecorded: runtime.onActionRecorded,
   });
 
   const safeBrowser = async (
