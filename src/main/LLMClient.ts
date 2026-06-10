@@ -849,6 +849,74 @@ export class LLMClient {
     return this.activeAssistantMessageIndex;
   }
 
+  private generateDendritePython(actions: any[]): string {
+    if (actions.length === 0) return "# No actions recorded.";
+    let code = `import asyncio\nfrom dendrite import Dendrite\n\nasync def main():\n    # Initialize Dendrite browser automation client\n    client = Dendrite()\n    \n`;
+    for (const action of actions) {
+      switch (action.type) {
+        case "navigate":
+          code += `    # Navigate to target page\n    await client.goto("${action.url}")\n\n`;
+          break;
+        case "search":
+          code += `    # Search via search engine\n    await client.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}")\n\n`;
+          break;
+        case "click":
+          const selClickEscaped = (action.selector || "").replace(/"/g, '\\"');
+          code += `    # Click on the element\n    await client.click("${selClickEscaped}")\n\n`;
+          break;
+        case "type":
+          const selTypeEscaped = (action.selector || "").replace(/"/g, '\\"');
+          const textEscaped = (action.text || "").replace(/"/g, '\\"');
+          code += `    # Type text into the input field\n    await client.fill("${selTypeEscaped}", "${textEscaped}")\n`;
+          if (action.pressEnter) {
+            code += `    await client.press("${selTypeEscaped}", "Enter")\n`;
+          }
+          code += `\n`;
+          break;
+        case "scroll":
+          const selScrollEscaped = (action.selector || "body").replace(/"/g, '\\"');
+          code += `    # Scroll target area\n    await client.scroll("${selScrollEscaped}")\n\n`;
+          break;
+      }
+    }
+    code += `if __name__ == "__main__":\n    asyncio.run(main())\n`;
+    return code;
+  }
+
+  private generateDendriteTypeScript(actions: any[]): string {
+    if (actions.length === 0) return "// No actions recorded.";
+    let code = `import { Dendrite } from "dendrite-sdk";\n\nasync function main() {\n  // Initialize Dendrite browser automation client\n  const client = new Dendrite();\n  \n`;
+    for (const action of actions) {
+      switch (action.type) {
+        case "navigate":
+          code += `  // Navigate to target page\n  await client.goto("${action.url}");\n\n`;
+          break;
+        case "search":
+          code += `  // Search via search engine\n  await client.goto("https://www.google.com/search?q=${encodeURIComponent(action.query || "")}");\n\n`;
+          break;
+        case "click":
+          const selClickEscaped = (action.selector || "").replace(/"/g, '\\"');
+          code += `  // Click on the element\n  await client.click("${selClickEscaped}");\n\n`;
+          break;
+        case "type":
+          const selTypeEscaped = (action.selector || "").replace(/"/g, '\\"');
+          const textEscaped = (action.text || "").replace(/"/g, '\\"');
+          code += `  // Type text into the input field\n  await client.fill("${selTypeEscaped}", "${textEscaped}");\n`;
+          if (action.pressEnter) {
+            code += `  await client.press("${selTypeEscaped}", "Enter");\n`;
+          }
+          code += `\n`;
+          break;
+        case "scroll":
+          const selScrollEscaped = (action.selector || "body").replace(/"/g, '\\"');
+          code += `  // Scroll target area\n  await client.scroll("${selScrollEscaped}");\n\n`;
+          break;
+      }
+    }
+    code += `}\n\nmain().catch(console.error);\n`;
+    return code;
+  }
+
   private async processStream(
     stream: AsyncIterable<{ type: string; text?: string; error?: unknown }>,
     messageId: string,
@@ -874,6 +942,16 @@ export class LLMClient {
 
     if (token !== this.streamToken) {
       return this.currentAccumulatedText;
+    }
+
+    if (this.recordedActions.length > 0) {
+      const pythonScript = this.generateDendritePython(this.recordedActions);
+      const tsScript = this.generateDendriteTypeScript(this.recordedActions);
+      const payload = JSON.stringify({
+        python: pythonScript,
+        typescript: tsScript,
+      });
+      this.currentAccumulatedText += `\n\n---\n### 🤖 Generated Dendrite Automation Script\n\`\`\`dendrite-code\n${payload}\n\`\`\`\n`;
     }
 
     this.currentStatusLine = "";

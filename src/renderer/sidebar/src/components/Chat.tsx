@@ -61,6 +61,76 @@ const StreamingContent: React.FC<{ content: string }> = ({ content }) => (
   </div>
 );
 
+const DendriteCodeRenderer: React.FC<{ jsonContent: string }> = ({ jsonContent }) => {
+  const [activeTab, setActiveTab] = useState<"python" | "typescript">("python");
+  const [copied, setCopied] = useState(false);
+
+  let data = { python: "", typescript: "" };
+  try {
+    data = JSON.parse(jsonContent);
+  } catch (e) {
+    console.error("Failed to parse dendrite-code payload:", e);
+    return <pre className="bg-destructive/10 text-destructive p-3 rounded-lg text-xs">{jsonContent}</pre>;
+  }
+
+  const codeToDisplay = activeTab === "python" ? data.python : data.typescript;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeToDisplay);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-4 border border-border/80 dark:border-border/30 rounded-xl overflow-hidden shadow-md bg-card/65 backdrop-blur-md">
+      <div className="flex items-center justify-between px-4 py-2 bg-muted/60 dark:bg-muted/20 border-b border-border/60 dark:border-border/20">
+        <div className="flex gap-1">
+          <button
+            onClick={() => setActiveTab("python")}
+            className={cn(
+              "px-3 py-1 text-xs font-semibold rounded-md transition-all",
+              activeTab === "python"
+                ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            Python SDK
+          </button>
+          <button
+            onClick={() => setActiveTab("typescript")}
+            className={cn(
+              "px-3 py-1 text-xs font-semibold rounded-md transition-all",
+              activeTab === "typescript"
+                ? "bg-primary text-primary-foreground shadow-sm font-bold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            TypeScript SDK
+          </button>
+        </div>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-md transition-colors"
+        >
+          {copied ? (
+            <span className="text-emerald-500 font-semibold animate-pulse">Copied!</span>
+          ) : (
+            <>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+              </svg>
+              <span>Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="p-4 text-xs font-mono overflow-x-auto bg-muted/30 dark:bg-black/10 text-foreground leading-relaxed select-text m-0 whitespace-pre">
+        <code>{codeToDisplay}</code>
+      </pre>
+    </div>
+  );
+};
+
 const Markdown: React.FC<{ content: string }> = ({ content }) => (
   <div
     className="prose prose-sm dark:prose-invert max-w-none 
@@ -76,8 +146,21 @@ const Markdown: React.FC<{ content: string }> = ({ content }) => (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkBreaks]}
       components={{
+        pre: ({ children, ...props }) => {
+          const isDendrite = React.Children.toArray(children).some(
+            (child: any) => child?.props?.className === "language-dendrite-code"
+          );
+          if (isDendrite) {
+            return <>{children}</>;
+          }
+          return <pre {...props}>{children}</pre>;
+        },
         code: ({ className, children, ...props }) => {
           const inline = !className;
+          if (className === "language-dendrite-code") {
+            const rawText = String(children).trim();
+            return <DendriteCodeRenderer jsonContent={rawText} />;
+          }
           return inline ? (
             <code
               className="bg-muted dark:bg-muted/50 px-1 py-0.5 rounded text-sm text-foreground"
